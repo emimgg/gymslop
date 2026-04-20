@@ -14,6 +14,7 @@ const es = {
   'nav.theme': 'Tema',
   'nav.language': 'Idioma',
   'nav.social': 'Social',
+  'nav.more': 'Más',
   'nav.profile': 'Perfil',
   'nav.leaderboard': 'Clasificación',
 
@@ -735,7 +736,7 @@ const en: Record<keyof typeof es, string> = {
   'nav.dashboard': 'Dashboard', 'nav.routines': 'Routines', 'nav.meals': 'Meals',
   'nav.weight': 'Weight', 'nav.feels': 'Feels', 'nav.progress': 'Progress',
   'nav.trophies': 'Trophies', 'nav.theme': 'Theme', 'nav.language': 'Language',
-  'nav.social': 'Social', 'nav.profile': 'Profile', 'nav.leaderboard': 'Leaderboard',
+  'nav.social': 'Social', 'nav.more': 'More', 'nav.profile': 'Profile', 'nav.leaderboard': 'Leaderboard',
 
   'common.save': 'Save', 'common.cancel': 'Cancel', 'common.delete': 'Delete',
   'common.signOut': 'Sign out', 'common.today': 'TODAY', 'common.date': 'Date',

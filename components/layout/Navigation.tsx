@@ -23,6 +23,9 @@ const tabKeys = [
   { href: '/social',    icon: Users,           labelKey: 'nav.social'    },
 ] as const;
 
+// Mobile bottom bar shows only the core 5 tabs; progress/trophies/social live in the avatar dropdown
+const mobileTabKeys = tabKeys.slice(0, 5);
+
 const themes: { id: Theme; label: string; title: string; bg: string; accent: string }[] = [
   { id: 'minimal', label: 'Minimal', title: 'Minimal — clean dark (default)', bg: '#18181b', accent: '#4ade80' },
   { id: 'light',   label: 'Light',   title: 'Light — clean light mode',       bg: '#f8fafc', accent: '#1677eb' },
@@ -144,9 +147,8 @@ export function Navigation() {
       {/* ── Mobile bottom tab bar ─────────────────────────────────────────── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-card border-t border-dark-border">
         <div className="flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          {tabKeys.map(({ href, icon: Icon, labelKey }) => {
+          {mobileTabKeys.map(({ href, icon: Icon, labelKey }) => {
             const active = pathname.startsWith(href);
-            const isSocial = href === '/social';
             return (
               <Link
                 key={href}
@@ -156,14 +158,7 @@ export function Navigation() {
                   active ? 'text-neon-green' : 'text-slate-500'
                 )}
               >
-                <div className="relative">
-                  <Icon size={18} />
-                  {isSocial && unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-neon-pink text-[8px] font-bold text-white flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </div>
+                <Icon size={18} />
                 <span className="leading-none">{t(labelKey)}</span>
               </Link>
             );
