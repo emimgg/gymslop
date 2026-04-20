@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from 'react-hot-toast';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'gymslop',
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
