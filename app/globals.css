@@ -1,0 +1,239 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ─── Theme variables ─────────────────────────────────────────────────────────
+   All colors are RGB channels so Tailwind opacity modifiers (bg-neon-green/20)
+   and CSS calc still work. One class on <html> switches every token.
+   DEFAULT theme is Minimal — applied by :root so first paint is correct
+   even before JS runs (no flash).
+────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Minimal (DEFAULT) ── clean dark, flat colors, no glows ──────────────── */
+:root,
+.theme-minimal {
+  /* Distinct accent colors — saturated enough to tell apart, no glow needed */
+  --neon-green:   74 222 128;   /* green-400   */
+  --neon-cyan:    56 189 248;   /* sky-400     */
+  --neon-pink:   244 114 182;   /* pink-400    */
+  --neon-yellow: 234 179   8;   /* yellow-500  */
+  --neon-purple: 167 139 250;   /* violet-400  */
+  --neon-orange: 251 146  60;   /* orange-400  */
+  --neon-red:    248 113 113;   /* red-400     */
+  --neon-blue:    96 165 250;   /* blue-400    */
+  --neon-lime:   163 230  53;   /* lime-400    */
+  /* Pure dark zinc surfaces */
+  --dark-bg:       9   9  11;   /* zinc-950    */
+  --dark-card:    24  24  27;   /* zinc-900    */
+  --dark-border:  39  39  42;   /* zinc-800    */
+  --dark-hover:   28  28  31;
+  --dark-muted:   18  18  20;
+  /* No glows */
+  --glow-card: 0;
+  --glow-text: 0;
+  --app-font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* ── Neon ── cyberpunk dark, full glow ───────────────────────────────────── */
+.theme-neon {
+  --neon-green:   57 255  20;
+  --neon-cyan:     0 245 255;
+  --neon-pink:   255  45 120;
+  --neon-yellow: 255 255   0;
+  --neon-purple: 191   0 255;
+  --neon-orange: 255 102   0;
+  --neon-red:    220  38  38;
+  --neon-blue:    56 189 248;
+  --neon-lime:     0 255  65;
+  --dark-bg:       8  11  18;
+  --dark-card:    13  17  23;
+  --dark-border:  30  45  61;
+  --dark-hover:   21  29  46;
+  --dark-muted:   26  35  50;
+  --glow-card: 0.15;
+  --glow-text: 1;
+  --app-font: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Light ── white/light-gray surfaces, dark text, muted accents ─────────── */
+.theme-light {
+  /* Accents are -600 shades — visible on white without needing glow */
+  --neon-green:   22 163  74;   /* green-600   */
+  --neon-cyan:     8 145 178;   /* cyan-600    */
+  --neon-pink:   219  39 119;   /* pink-600    */
+  --neon-yellow: 202 138   4;   /* yellow-600  */
+  --neon-purple: 124  58 237;   /* violet-600  */
+  --neon-orange: 234  88  12;   /* orange-600  */
+  --neon-red:    220  38  38;   /* red-600     */
+  --neon-blue:    37  99 235;   /* blue-600    */
+  --neon-lime:   101 163  13;   /* lime-600    */
+  /* Light surfaces — reuse the "dark-*" token names, values now light */
+  --dark-bg:     248 250 252;   /* slate-50    */
+  --dark-card:   255 255 255;   /* white       */
+  --dark-border: 226 232 240;   /* slate-200   */
+  --dark-hover:  241 245 249;   /* slate-100   */
+  --dark-muted:  248 250 252;   /* slate-50    */
+  --glow-card: 0;
+  --glow-text: 0;
+  --app-font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: rgb(var(--dark-bg));
+  color: #e2e8f0;
+  font-family: var(--app-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Light theme: invert text so slate-xxx utilities read dark on light bg ── */
+html.theme-light body          { color: #1e293b; }
+html.theme-light .text-slate-100 { color: #0f172a; }
+html.theme-light .text-slate-200 { color: #1e293b; }
+html.theme-light .text-slate-300 { color: #334155; }
+html.theme-light .text-slate-400 { color: #475569; }
+html.theme-light .text-slate-500 { color: #64748b; }
+html.theme-light .text-slate-600 { color: #475569; }
+html.theme-light .text-slate-700 { color: #334155; }
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgb(var(--dark-card)); }
+::-webkit-scrollbar-thumb { background: rgb(var(--dark-border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--neon-green) / 0.5); }
+
+/* ─── Card glow helpers (used by Card.tsx) ────────────────────────────────── */
+
+.card-glow-green  { box-shadow: 0 0 14px rgb(var(--neon-green)  / var(--glow-card, 0)); }
+.card-glow-cyan   { box-shadow: 0 0 14px rgb(var(--neon-cyan)   / var(--glow-card, 0)); }
+.card-glow-pink   { box-shadow: 0 0 14px rgb(var(--neon-pink)   / var(--glow-card, 0)); }
+.card-glow-yellow { box-shadow: 0 0 14px rgb(var(--neon-yellow) / var(--glow-card, 0)); }
+.card-glow-purple { box-shadow: 0 0 14px rgb(var(--neon-purple) / var(--glow-card, 0)); }
+
+/* Light theme: replace neon card glow with a subtle drop shadow */
+html.theme-light .card-glow-green,
+html.theme-light .card-glow-cyan,
+html.theme-light .card-glow-pink,
+html.theme-light .card-glow-yellow,
+html.theme-light .card-glow-purple {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+}
+
+/* ─── Neon text utilities ─────────────────────────────────────────────────── */
+
+.neon-text-green {
+  color: rgb(var(--neon-green));
+  text-shadow:
+    0 0 10px rgb(var(--neon-green) / var(--glow-text, 0)),
+    0 0 30px rgb(var(--neon-green) / calc(var(--glow-text, 0) * 0.4));
+}
+.neon-text-cyan {
+  color: rgb(var(--neon-cyan));
+  text-shadow:
+    0 0 10px rgb(var(--neon-cyan) / var(--glow-text, 0)),
+    0 0 30px rgb(var(--neon-cyan) / calc(var(--glow-text, 0) * 0.4));
+}
+.neon-text-pink {
+  color: rgb(var(--neon-pink));
+  text-shadow:
+    0 0 10px rgb(var(--neon-pink) / var(--glow-text, 0)),
+    0 0 30px rgb(var(--neon-pink) / calc(var(--glow-text, 0) * 0.4));
+}
+
+/* ─── Neon border ─────────────────────────────────────────────────────────── */
+
+.neon-border-green {
+  border-color: rgb(var(--neon-green));
+  box-shadow: 0 0 8px rgb(var(--neon-green) / var(--glow-card, 0)), inset 0 0 8px rgb(var(--neon-green) / 0.05);
+}
+.neon-border-cyan {
+  border-color: rgb(var(--neon-cyan));
+  box-shadow: 0 0 8px rgb(var(--neon-cyan) / var(--glow-card, 0)), inset 0 0 8px rgb(var(--neon-cyan) / 0.05);
+}
+
+/* ─── Skeleton shimmer ────────────────────────────────────────────────────── */
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--dark-muted)) 25%,
+    rgb(var(--dark-border)) 37%,
+    rgb(var(--dark-muted)) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+
+/* ─── Glass card ──────────────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgb(var(--dark-card) / 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(var(--dark-border) / 0.8);
+}
+
+/* ─── Progress / trophy glows ─────────────────────────────────────────────── */
+
+.progress-bar-glow { box-shadow: 0 0 8px currentColor; }
+
+.trophy-glow {
+  filter:
+    drop-shadow(0 0 6px  rgb(var(--neon-yellow) / var(--glow-text, 0)))
+    drop-shadow(0 0 12px rgb(var(--neon-yellow) / calc(var(--glow-text, 0) * 0.4)));
+}
+
+/* ─── Tab active dot ──────────────────────────────────────────────────────── */
+
+.tab-indicator { position: relative; }
+.tab-indicator::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgb(var(--neon-green));
+  box-shadow: 0 0 6px rgb(var(--neon-green) / var(--glow-text, 0));
+}
+
+/* ─── Input focus ─────────────────────────────────────────────────────────── */
+
+.neon-input:focus {
+  outline: none;
+  border-color: rgb(var(--neon-cyan));
+  box-shadow: 0 0 0 2px rgb(var(--neon-cyan) / 0.2);
+}
+
+/* ─── PWA / Mobile ────────────────────────────────────────────────────────── */
+
+/* Bottom padding that clears the nav bar + iOS home indicator */
+.pb-safe-nav {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+
+/* Prevent double-tap zoom on interactive elements */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Minimum 44×44px tap targets on mobile */
+@media (max-width: 1023px) {
+  button:not([data-no-min-size]),
+  a:not([data-no-min-size]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

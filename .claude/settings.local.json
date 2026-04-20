@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(npm show *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node *)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(grep *)",
+      "Bash(npm run *)",
+      "Bash(npx tsx *)",
+      "Bash(npx ts-node *)",
+      "Bash(curl -s --max-time 5 https://ep-late-dawn-ac1w7tx7-pooler.sa-east-1.aws.neon.tech)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_A6p1rqkWFPXu@ep-late-dawn-ac1w7tx7.sa-east-1.aws.neon.tech/neondb?sslmode=require\" npx tsx prisma/seed.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_A6p1rqkWFPXu@ep-late-dawn-ac1w7tx7.sa-east-1.aws.neon.tech/neondb?sslmode=require\" npx tsx *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

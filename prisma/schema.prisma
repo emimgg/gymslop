@@ -1,0 +1,484 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Auth (NextAuth adapter) ──────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  username      String?   @unique
+  createdAt     DateTime  @default(now())
+
+  // Gamification
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  lastActiveAt  DateTime?
+
+  // Weight goal & TDEE
+  startingWeight Float?
+  goalWeight     Float?
+  heightCm       Float?
+  age            Int?
+  sex            String?    // 'MALE' | 'FEMALE'
+  activityLevel          String?    // legacy, replaced by step/session fields below
+  stepsPerWeek           Int?       // total steps per week (for NEAT estimation)
+  liftingSessionsPerWeek Int?       // gym sessions per week (for EAT estimation)
+  avgSessionDurationMin  Int?       // average session duration in minutes
+  weeklyGoalKg   Float?     // negative = cut, positive = bulk, 0 = maintain
+  caloricTarget  Int?       // daily kcal target (computed from TDEE + weekly goal)
+
+  accounts       Account[]
+  sessions       Session[]
+  routines       Routine[]
+  workoutSessions WorkoutSession[]
+  mealLogs       MealLog[]
+  weightLogs     WeightLog[]
+  feelsLogs      FeelsLog[]
+  measurements   BodyMeasurement[]
+  progressPhotos ProgressPhoto[]
+  userTrophies   UserTrophy[]
+  customExercises Exercise[] @relation("CustomExercises")
+  customFoods    Food[]     @relation("CustomFoods")
+
+  // Social
+  sentFriendships     Friendship[]            @relation("SentFriendships")
+  receivedFriendships Friendship[]            @relation("ReceivedFriendships")
+  sentInvites         TrainingInvite[]        @relation("SentInvites")
+  receivedInvites     TrainingInvite[]        @relation("ReceivedInvites")
+  notifications       Notification[]
+  accountabilityAs1   AccountabilityPartner[] @relation("AccountabilityUser1")
+  accountabilityAs2   AccountabilityPartner[] @relation("AccountabilityUser2")
+}
+
+// ─── Exercises ───────────────────────────────────────────────────────────────
+
+model Exercise {
+  id             String      @id @default(cuid())
+  name           String
+  muscleGroup    MuscleGroup
+  equipment      Equipment
+  isCustom       Boolean     @default(false)
+  stretchFocused Boolean     @default(false)
+  createdById    String?
+  createdBy      User?       @relation("CustomExercises", fields: [createdById], references: [id])
+
+  routineExercises  RoutineExercise[]
+  workoutSets       WorkoutSet[]
+  templateExercises TemplateExercise[]
+
+  @@index([muscleGroup])
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  NECK
+  BICEPS
+  TRICEPS
+  FOREARMS
+  CORE
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+  FULL_BODY
+  CARDIO
+}
+
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  CABLE
+  MACHINE
+  BODYWEIGHT
+  KETTLEBELL
+  BANDS
+  OTHER
+}
+
+// ─── Routines ────────────────────────────────────────────────────────────────
+
+model Routine {
+  id        String         @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days      RoutineDay[]
+
+  @@index([userId])
+}
+
+model RoutineDay {
+  id         String            @id @default(cuid())
+  routineId  String
+  dayOfWeek  Int               // 0=Sun, 1=Mon ... 6=Sat
+  routine    Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercises  RoutineExercise[]
+
+  @@unique([routineId, dayOfWeek])
+}
+
+model RoutineExercise {
+  id            String   @id @default(cuid())
+  routineDayId  String
+  exerciseId    String
+  order         Int
+  targetSets    Int      @default(3)
+  targetReps    Int      @default(10)
+  targetWeight  Float?
+  setTechniques String[] @default([])
+  routineDay    RoutineDay @relation(fields: [routineDayId], references: [id], onDelete: Cascade)
+  exercise      Exercise   @relation(fields: [exerciseId], references: [id])
+
+  @@index([routineDayId])
+}
+
+// ─── Workout Sessions ────────────────────────────────────────────────────────
+
+model WorkoutSession {
+  id          String       @id @default(cuid())
+  userId      String
+  routineId   String?
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  xpEarned    Int          @default(0)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sets        WorkoutSet[]
+
+  @@index([userId])
+}
+
+model WorkoutSet {
+  id         String         @id @default(cuid())
+  sessionId  String
+  exerciseId String
+  setNumber  Int
+  reps       Int
+  weight     Float
+  isWarmup   Boolean        @default(false)
+  isPR       Boolean        @default(false)
+  technique  String         @default("NORMAL")
+  tempo      String?
+  createdAt  DateTime       @default(now())
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise   Exercise       @relation(fields: [exerciseId], references: [id])
+
+  @@index([sessionId])
+  @@index([exerciseId])
+}
+
+// ─── Meals ───────────────────────────────────────────────────────────────────
+
+model Food {
+  id               String   @id @default(cuid())
+  name             String
+  brand            String?
+  calories         Float    // per 100g — cooked (or only) value
+  protein          Float
+  carbs            Float
+  fat              Float
+  fiber            Float    @default(0)
+  serving          Float    @default(100)
+  // Raw-state macros — null means raw/cooked doesn't apply (NA)
+  rawCalories      Float?
+  rawProtein       Float?
+  rawCarbs         Float?
+  rawFat           Float?
+  defaultCookState String   @default("COOKED") // "RAW" | "COOKED" | "NA"
+  isCustom         Boolean  @default(false)
+  createdById      String?
+  createdBy        User?    @relation("CustomFoods", fields: [createdById], references: [id])
+
+  mealItems        MealLogItem[]
+}
+
+model MealLog {
+  id     String        @id @default(cuid())
+  userId String
+  date   DateTime      @db.Date
+  xpEarned Int         @default(0)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  MealLogItem[]
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model MealLogItem {
+  id        String   @id @default(cuid())
+  mealLogId String
+  foodId    String
+  mealType  MealType
+  quantity  Float    // in grams
+  cookState String   @default("COOKED") // "RAW" | "COOKED" | "NA"
+  mealLog   MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  food      Food     @relation(fields: [foodId], references: [id])
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// ─── Routine Templates (global, not user-owned) ───────────────────────────────
+
+model RoutineTemplate {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String
+  daysPerWeek Int
+  difficulty  String        // "Beginner" | "Intermediate" | "Advanced"
+  days        TemplateDay[]
+}
+
+model TemplateDay {
+  id         String             @id @default(cuid())
+  templateId String
+  dayOfWeek  Int
+  label      String
+  template   RoutineTemplate    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercises  TemplateExercise[]
+}
+
+model TemplateExercise {
+  id          String      @id @default(cuid())
+  dayId       String
+  exerciseId  String
+  sets        Int
+  repsDisplay String
+  order       Int
+  day         TemplateDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  exercise    Exercise    @relation(fields: [exerciseId], references: [id])
+}
+
+// ─── Weight ──────────────────────────────────────────────────────────────────
+
+model WeightLog {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+  weight Float    // kg
+  note   String?
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// ─── Feels ───────────────────────────────────────────────────────────────────
+
+model FeelsLog {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime @db.Date
+  sleep        Int      // 1-5
+  performance  Int      // 1-5
+  hunger       Int      // 1-5
+  energy       Int      // 1-5
+  stress       Int      // 1-5
+  mood         Int      // 1-5
+  note         String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// ─── Progress ────────────────────────────────────────────────────────────────
+
+model BodyMeasurement {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  neck      Float?
+  chest     Float?
+  waist     Float?
+  hips      Float?
+  leftArm   Float?
+  rightArm  Float?
+  leftThigh Float?
+  rightThigh Float?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ProgressPhoto {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @db.Date
+  url       String
+  note      String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Trophies ────────────────────────────────────────────────────────────────
+
+model Trophy {
+  id           String         @id @default(cuid())
+  key          String         @unique
+  name         String
+  description  String
+  icon         String
+  category     TrophyCategory
+  xpReward     Int            @default(50)
+  unobtainable Boolean        @default(false)
+  userTrophies UserTrophy[]
+}
+
+model UserTrophy {
+  id         String   @id @default(cuid())
+  userId     String
+  trophyId   String
+  unlockedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trophy     Trophy   @relation(fields: [trophyId], references: [id])
+
+  @@unique([userId, trophyId])
+}
+
+enum TrophyCategory {
+  CONSISTENCY
+  STRENGTH
+  NUTRITION
+  WELLNESS
+  MILESTONES
+  MISC
+}
+
+// ─── Social ──────────────────────────────────────────────────────────────────
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  TRAINING_INVITE
+  TRAINING_ACCEPTED
+  FRIEND_PR
+  FRIEND_TROPHY
+  ACCOUNTABILITY_MISS
+}
+
+model Friendship {
+  id         String           @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  sender     User             @relation("SentFriendships", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User             @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model TrainingInvite {
+  id           String       @id @default(cuid())
+  senderId     String
+  receiverId   String
+  muscleGroup  String
+  proposedTime DateTime
+  message      String?
+  status       InviteStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  sender       User         @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver     User         @relation("ReceivedInvites", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AccountabilityPartner {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
+  user1     User     @relation("AccountabilityUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     User     @relation("AccountabilityUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+}
