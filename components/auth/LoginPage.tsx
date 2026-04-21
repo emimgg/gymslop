@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { Github } from 'lucide-react';
+import { Github, UserRound } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
 
 export function LoginPage() {
@@ -52,6 +52,23 @@ export function LoginPage() {
           >
             <Github size={18} />
             {t('login.continueGithub')}
+          </button>
+
+          <div className="relative my-1">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-dark-border" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-dark-card px-2 text-xs text-slate-600">o</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => signIn('guest', { callbackUrl: '/dashboard' })}
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-slate-700 bg-transparent text-slate-400 hover:border-slate-500 hover:text-slate-200 transition-all duration-200 text-sm font-medium"
+          >
+            <UserRound size={18} />
+            Entrar como invitado (Prof. Silvia)
           </button>
 
           <p className="text-center text-xs text-slate-600 mt-4">{t('login.private')}</p>

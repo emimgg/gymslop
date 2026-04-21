@@ -2,7 +2,10 @@ import { NextAuthOptions, getServerSession } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
+
+export const GUEST_USER_ID = 'demo_silvia_gymslop';
 
 async function generateUsername(userId: string, email: string | null, name: string | null): Promise<string> {
   const base = (email?.split('@')[0] ?? name ?? 'user')
@@ -29,6 +32,18 @@ export const authOptions: NextAuthOptions = {
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+    CredentialsProvider({
+      id: 'guest',
+      name: 'Guest',
+      credentials: {},
+      async authorize() {
+        const guest = await prisma.user.findUnique({
+          where: { id: GUEST_USER_ID },
+          select: { id: true, name: true, email: true, image: true },
+        });
+        return guest ?? null;
+      },
     }),
   ],
   session: {

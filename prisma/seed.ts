@@ -340,6 +340,227 @@ async function main() {
   await prisma.trophy.createMany({ data: trophies, skipDuplicates: true });
   console.log(`  ✓ ${trophies.length} trophies seeded`);
 
+  // ─── Guest demo user — Prof. Silvia ──────────────────────────────────────────
+  const GUEST_ID = 'demo_silvia_gymslop';
+
+  function daysAgo(n: number): Date {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    d.setHours(10, 0, 0, 0);
+    return d;
+  }
+
+  function dateOnly(n: number): Date {
+    const d = daysAgo(n);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  await prisma.user.upsert({
+    where: { id: GUEST_ID },
+    update: {},
+    create: {
+      id: GUEST_ID,
+      name: 'Prof. Silvia',
+      username: 'prof_silvia',
+      email: 'silvia@gymslop.demo',
+      xp: 2450,
+      level: 5,
+      currentStreak: 12,
+      longestStreak: 14,
+      lastActiveAt: daysAgo(1),
+      startingWeight: 68,
+      goalWeight: 62,
+      heightCm: 165,
+      age: 42,
+      sex: 'FEMALE',
+      liftingSessionsPerWeek: 3,
+      avgSessionDurationMin: 55,
+      weeklyGoalKg: -0.5,
+      caloricTarget: 1800,
+    },
+  });
+
+  async function findEx(name: string) {
+    const ex = await prisma.exercise.findFirst({ where: { name, isCustom: false } });
+    if (!ex) throw new Error(`Exercise not found: ${name}`);
+    return ex.id;
+  }
+
+  const existingSessions = await prisma.workoutSession.count({ where: { userId: GUEST_ID } });
+  if (existingSessions === 0) {
+    const benchId    = await findEx('Bench Press');
+    const incDbId    = await findEx('Incline Dumbbell Press');
+    const tricepId   = await findEx('Tricep Pushdown');
+    const latPullId  = await findEx('Lat Pulldown');
+    const cableRowId = await findEx('Seated Cable Row');
+    const dbCurlId   = await findEx('Dumbbell Curl');
+    const squatId    = await findEx('Squat');
+    const legPressId = await findEx('Leg Press');
+    const legExtId   = await findEx('Leg Extension');
+    const dbShldId   = await findEx('Dumbbell Shoulder Press');
+    const latRaiseId = await findEx('Lateral Raise');
+    const barbRowId  = await findEx('Barbell Row');
+    const barbCurlId = await findEx('Barbell Curl');
+    const hipThrstId = await findEx('Hip Thrust');
+    const rdlId      = await findEx('Romanian Deadlift (RDL)');
+    const kickbkId   = await findEx('Cable Kickback');
+
+    type SetInput = { exerciseId: string; setNumber: number; reps: number; weight: number; isPR?: boolean };
+
+    async function createSession(daysBack: number, xpEarned: number, sets: SetInput[]) {
+      const s = await prisma.workoutSession.create({
+        data: {
+          userId: GUEST_ID,
+          startedAt: daysAgo(daysBack),
+          completedAt: new Date(daysAgo(daysBack).getTime() + 55 * 60 * 1000),
+          xpEarned,
+          sets: {
+            create: sets.map((s) => ({
+              exerciseId: s.exerciseId,
+              setNumber: s.setNumber,
+              reps: s.reps,
+              weight: s.weight,
+              isPR: s.isPR ?? false,
+            })),
+          },
+        },
+      });
+      return s;
+    }
+
+    // Session 1 — Chest + Triceps (30 days ago)
+    await createSession(30, 120, [
+      { exerciseId: benchId,   setNumber: 1, reps: 10, weight: 50 },
+      { exerciseId: benchId,   setNumber: 2, reps: 8,  weight: 55 },
+      { exerciseId: benchId,   setNumber: 3, reps: 6,  weight: 60 },
+      { exerciseId: incDbId,   setNumber: 1, reps: 10, weight: 20 },
+      { exerciseId: incDbId,   setNumber: 2, reps: 10, weight: 20 },
+      { exerciseId: incDbId,   setNumber: 3, reps: 8,  weight: 22 },
+      { exerciseId: tricepId,  setNumber: 1, reps: 12, weight: 30 },
+      { exerciseId: tricepId,  setNumber: 2, reps: 12, weight: 32 },
+      { exerciseId: tricepId,  setNumber: 3, reps: 10, weight: 35 },
+    ]);
+
+    // Session 2 — Back + Biceps (25 days ago)
+    await createSession(25, 115, [
+      { exerciseId: latPullId,  setNumber: 1, reps: 10, weight: 45 },
+      { exerciseId: latPullId,  setNumber: 2, reps: 10, weight: 50 },
+      { exerciseId: latPullId,  setNumber: 3, reps: 8,  weight: 50 },
+      { exerciseId: cableRowId, setNumber: 1, reps: 12, weight: 40 },
+      { exerciseId: cableRowId, setNumber: 2, reps: 10, weight: 45 },
+      { exerciseId: cableRowId, setNumber: 3, reps: 10, weight: 45 },
+      { exerciseId: dbCurlId,   setNumber: 1, reps: 12, weight: 12 },
+      { exerciseId: dbCurlId,   setNumber: 2, reps: 12, weight: 12 },
+      { exerciseId: dbCurlId,   setNumber: 3, reps: 10, weight: 14 },
+    ]);
+
+    // Session 3 — Legs (20 days ago)
+    await createSession(20, 130, [
+      { exerciseId: squatId,    setNumber: 1, reps: 10, weight: 40 },
+      { exerciseId: squatId,    setNumber: 2, reps: 8,  weight: 45 },
+      { exerciseId: squatId,    setNumber: 3, reps: 6,  weight: 50, isPR: true },
+      { exerciseId: legPressId, setNumber: 1, reps: 12, weight: 80 },
+      { exerciseId: legPressId, setNumber: 2, reps: 12, weight: 90 },
+      { exerciseId: legPressId, setNumber: 3, reps: 10, weight: 100 },
+      { exerciseId: legExtId,   setNumber: 1, reps: 15, weight: 35 },
+      { exerciseId: legExtId,   setNumber: 2, reps: 12, weight: 40 },
+      { exerciseId: legExtId,   setNumber: 3, reps: 12, weight: 40 },
+    ]);
+
+    // Session 4 — Push (15 days ago)
+    await createSession(15, 140, [
+      { exerciseId: benchId,    setNumber: 1, reps: 8,  weight: 55 },
+      { exerciseId: benchId,    setNumber: 2, reps: 6,  weight: 60 },
+      { exerciseId: benchId,    setNumber: 3, reps: 5,  weight: 62.5, isPR: true },
+      { exerciseId: dbShldId,   setNumber: 1, reps: 12, weight: 18 },
+      { exerciseId: dbShldId,   setNumber: 2, reps: 10, weight: 20 },
+      { exerciseId: dbShldId,   setNumber: 3, reps: 10, weight: 20 },
+      { exerciseId: latRaiseId, setNumber: 1, reps: 15, weight: 8 },
+      { exerciseId: latRaiseId, setNumber: 2, reps: 15, weight: 8 },
+      { exerciseId: latRaiseId, setNumber: 3, reps: 12, weight: 10 },
+    ]);
+
+    // Session 5 — Pull (10 days ago)
+    await createSession(10, 125, [
+      { exerciseId: barbRowId,  setNumber: 1, reps: 10, weight: 40 },
+      { exerciseId: barbRowId,  setNumber: 2, reps: 8,  weight: 45 },
+      { exerciseId: barbRowId,  setNumber: 3, reps: 8,  weight: 45 },
+      { exerciseId: latPullId,  setNumber: 1, reps: 10, weight: 50 },
+      { exerciseId: latPullId,  setNumber: 2, reps: 10, weight: 52.5 },
+      { exerciseId: latPullId,  setNumber: 3, reps: 8,  weight: 52.5 },
+      { exerciseId: barbCurlId, setNumber: 1, reps: 12, weight: 25 },
+      { exerciseId: barbCurlId, setNumber: 2, reps: 10, weight: 27.5 },
+      { exerciseId: barbCurlId, setNumber: 3, reps: 10, weight: 27.5 },
+    ]);
+
+    // Session 6 — Glutes + Hamstrings (5 days ago)
+    await createSession(5, 135, [
+      { exerciseId: hipThrstId, setNumber: 1, reps: 12, weight: 50 },
+      { exerciseId: hipThrstId, setNumber: 2, reps: 10, weight: 60 },
+      { exerciseId: hipThrstId, setNumber: 3, reps: 8,  weight: 65, isPR: true },
+      { exerciseId: rdlId,      setNumber: 1, reps: 12, weight: 40 },
+      { exerciseId: rdlId,      setNumber: 2, reps: 10, weight: 45 },
+      { exerciseId: rdlId,      setNumber: 3, reps: 10, weight: 50 },
+      { exerciseId: kickbkId,   setNumber: 1, reps: 15, weight: 15 },
+      { exerciseId: kickbkId,   setNumber: 2, reps: 15, weight: 17.5 },
+      { exerciseId: kickbkId,   setNumber: 3, reps: 12, weight: 17.5 },
+    ]);
+
+    console.log('  ✓ Guest user workout sessions seeded');
+  }
+
+  const existingWeightLogs = await prisma.weightLog.count({ where: { userId: GUEST_ID } });
+  if (existingWeightLogs === 0) {
+    const weightEntries = [
+      { n: 56, weight: 68.0 }, { n: 49, weight: 67.6 }, { n: 42, weight: 67.2 },
+      { n: 35, weight: 66.9 }, { n: 28, weight: 66.5 }, { n: 21, weight: 66.2 },
+      { n: 14, weight: 65.8 }, { n: 7,  weight: 65.4 }, { n: 0,  weight: 65.1 },
+    ];
+    await prisma.weightLog.createMany({
+      data: weightEntries.map(({ n, weight }) => ({
+        userId: GUEST_ID,
+        date: dateOnly(n),
+        weight,
+      })),
+      skipDuplicates: true,
+    });
+    console.log('  ✓ Guest user weight logs seeded');
+  }
+
+  const existingFeelLogs = await prisma.feelsLog.count({ where: { userId: GUEST_ID } });
+  if (existingFeelLogs === 0) {
+    const feelEntries = [
+      { n: 7, sleep: 3, performance: 4, hunger: 3, energy: 4, stress: 3, mood: 4 },
+      { n: 6, sleep: 4, performance: 4, hunger: 3, energy: 4, stress: 2, mood: 5 },
+      { n: 5, sleep: 4, performance: 5, hunger: 4, energy: 5, stress: 2, mood: 5 },
+      { n: 4, sleep: 3, performance: 3, hunger: 3, energy: 3, stress: 4, mood: 3 },
+      { n: 3, sleep: 4, performance: 4, hunger: 3, energy: 4, stress: 3, mood: 4 },
+      { n: 2, sleep: 5, performance: 5, hunger: 3, energy: 5, stress: 2, mood: 5 },
+      { n: 1, sleep: 4, performance: 4, hunger: 4, energy: 4, stress: 3, mood: 4 },
+    ];
+    await prisma.feelsLog.createMany({
+      data: feelEntries.map(({ n, ...rest }) => ({ userId: GUEST_ID, date: dateOnly(n), ...rest })),
+      skipDuplicates: true,
+    });
+    console.log('  ✓ Guest user feel logs seeded');
+  }
+
+  const trophyKeys = ['first_workout', 'workouts_10', 'first_pr', 'pr_10', 'first_feels', 'feels_streak_7', 'first_weigh_in', 'routine_created'];
+  const trophyRecords = await prisma.trophy.findMany({ where: { key: { in: trophyKeys } }, select: { id: true } });
+  if (trophyRecords.length > 0) {
+    await prisma.userTrophy.createMany({
+      data: trophyRecords.map((t, i) => ({
+        userId: GUEST_ID,
+        trophyId: t.id,
+        unlockedAt: daysAgo(30 - i * 3),
+      })),
+      skipDuplicates: true,
+    });
+    console.log('  ✓ Guest user trophies seeded');
+  }
+
+  console.log('  ✓ Guest demo user (Prof. Silvia) ready');
   console.log('✅ Seed complete!');
 }
 
