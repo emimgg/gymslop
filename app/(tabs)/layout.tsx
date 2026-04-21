@@ -1,6 +1,7 @@
 import { getAuthSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Navigation } from '@/components/layout/Navigation';
+import { WorkoutSessionWrapper } from '@/components/workout/WorkoutSessionWrapper';
 
 export default async function TabsLayout({ children }: { children: React.ReactNode }) {
   const session = await getAuthSession();
@@ -15,6 +16,7 @@ export default async function TabsLayout({ children }: { children: React.ReactNo
           {children}
         </div>
       </main>
+      <WorkoutSessionWrapper />
     </div>
   );
 }

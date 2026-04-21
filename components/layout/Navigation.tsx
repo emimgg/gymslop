@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTheme, type Theme } from '@/components/providers/ThemeProvider';
 import { useI18n } from '@/components/providers/I18nProvider';
@@ -11,6 +12,9 @@ import {
   Scale, Heart, TrendingUp, Trophy, Users,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useWorkoutStore } from '@/lib/workoutStore';
+import { NeonButton } from '@/components/ui/NeonButton';
+import { Modal } from '@/components/ui/Modal';
 
 const tabKeys = [
   { href: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
@@ -39,8 +43,29 @@ const langs: { id: Lang; flag: string; label: string }[] = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useI18n();
+  const { activeWorkout, minimizeWorkout, clearWorkout } = useWorkoutStore();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  function handleNavClick(e: React.MouseEvent, href: string) {
+    if (!activeWorkout || pathname.startsWith(href)) return;
+    e.preventDefault();
+    setPendingHref(href);
+  }
+
+  function handleMinimizeAndNavigate() {
+    minimizeWorkout();
+    if (pendingHref) router.push(pendingHref);
+    setPendingHref(null);
+  }
+
+  function handleDiscardAndNavigate() {
+    clearWorkout();
+    if (pendingHref) router.push(pendingHref);
+    setPendingHref(null);
+  }
 
   const { data: notifData } = useQuery<{ unreadCount: number }>({
     queryKey: ['notifications'],
@@ -68,6 +93,7 @@ export function Navigation() {
               <Link
                 key={href}
                 href={href}
+                onClick={(e) => handleNavClick(e, href)}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200',
                   active
@@ -153,6 +179,7 @@ export function Navigation() {
               <Link
                 key={href}
                 href={href}
+                onClick={(e) => handleNavClick(e, href)}
                 className={cn(
                   'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] transition-all duration-200 relative min-h-[44px] justify-center',
                   active ? 'text-neon-green' : 'text-slate-500'
@@ -165,6 +192,22 @@ export function Navigation() {
           })}
         </div>
       </nav>
+
+      {/* ── Workout nav guard dialog ──────────────────────────────────────── */}
+      <Modal open={pendingHref !== null} onClose={() => setPendingHref(null)} title={t('workout.navGuardTitle')}>
+        <p className="text-sm text-slate-400 mb-4">{t('workout.navGuardMessage')}</p>
+        <div className="flex flex-col gap-2">
+          <NeonButton variant="cyan" className="w-full" onClick={handleMinimizeAndNavigate}>
+            {t('workout.minimize')}
+          </NeonButton>
+          <NeonButton variant="danger" className="w-full" onClick={handleDiscardAndNavigate}>
+            {t('workout.discard')}
+          </NeonButton>
+          <NeonButton variant="ghost" className="w-full" onClick={() => setPendingHref(null)}>
+            {t('workout.cancel')}
+          </NeonButton>
+        </div>
+      </Modal>
     </>
   );
 }

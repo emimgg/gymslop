@@ -10,6 +10,7 @@ import { Trophy, Timer, Check, X, Flame, Plus, Zap } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { cn } from '@/lib/utils';
 import { TECHNIQUE_ORDER, TECHNIQUE_STYLES, type SetTechniqueKey } from '@/lib/techniques';
+import { useWorkoutStore, type WorkoutSetEntry, type WorkoutExercise } from '@/lib/workoutStore';
 import toast from 'react-hot-toast';
 
 interface Exercise {
@@ -18,70 +19,26 @@ interface Exercise {
   muscleGroup: string;
 }
 
-interface RoutineExercise {
-  exerciseId: string;
-  targetSets: number;
-  targetReps: number;
-  targetWeight: number | null;
-  setTechniques?: string[];
-  exercise: Exercise;
-}
-
-interface RoutineDay {
-  dayOfWeek: number;
-  exercises: RoutineExercise[];
-}
-
-interface Routine {
-  id: string;
-  name: string;
-}
-
-interface SetEntry {
-  setNumber: number;
-  reps: number;
-  weight: number;
-  done: boolean;
-  technique: SetTechniqueKey;
-  tempo: string;
-}
-
 interface WorkoutSessionProps {
-  routine: Routine;
-  day: RoutineDay;
-  isQuick: boolean;
   onComplete: () => void;
   onCancel: () => void;
 }
 
-export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: WorkoutSessionProps) {
+export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
   const { t } = useI18n();
-  const [exercises, setExercises] = useState<RoutineExercise[]>(day.exercises);
-  const [sets, setSets] = useState<Record<string, SetEntry[]>>(
-    Object.fromEntries(
-      day.exercises.map((re) => {
-        const presetTechniques = re.setTechniques ?? [];
-        return [
-          re.exerciseId,
-          Array.from({ length: re.targetSets }, (_, i) => ({
-            setNumber: i + 1,
-            reps: re.targetReps,
-            weight: 0,
-            done: false,
-            technique: (presetTechniques[i] as SetTechniqueKey) ?? 'NORMAL',
-            tempo: '',
-          })),
-        ];
-      })
-    )
-  );
+  const { activeWorkout, updateWorkoutState, minimizeWorkout, clearWorkout } = useWorkoutStore();
 
-  const [elapsed, setElapsed] = useState(0);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(activeWorkout?.exercises ?? []);
+  const [sets, setSets] = useState<Record<string, WorkoutSetEntry[]>>(activeWorkout?.sets ?? {});
+  const [elapsed, setElapsed] = useState(
+    activeWorkout ? Math.floor((Date.now() - activeWorkout.startedAt) / 1000) : 0
+  );
   const [restCountdown, setRestCountdown] = useState(0);
   const [completing, setCompleting] = useState(false);
   const [showResult, setShowResult] = useState<{ xpEarned: number; prCount: number; newTrophies: string[] } | null>(null);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [exSearch, setExSearch] = useState('');
+  const [showNavGuard, setShowNavGuard] = useState(false);
 
   const { data: allExercises } = useQuery<Exercise[]>({
     queryKey: ['exercises'],
@@ -89,16 +46,23 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
     enabled: showAddExercise,
   });
 
+  // Elapsed timer (continues from stored startedAt)
   useEffect(() => {
     const id = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // Rest countdown
   useEffect(() => {
     if (restCountdown <= 0) return;
     const id = setTimeout(() => setRestCountdown((r) => r - 1), 1000);
     return () => clearTimeout(id);
   }, [restCountdown]);
+
+  // Sync exercises+sets to store whenever they change
+  useEffect(() => {
+    updateWorkoutState(exercises, sets);
+  }, [exercises, sets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function formatTime(secs: number) {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -160,12 +124,12 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
   }
 
   function addExerciseToSession(ex: Exercise) {
-    const re: RoutineExercise = { exerciseId: ex.id, targetSets: 3, targetReps: 10, targetWeight: null, exercise: ex };
+    const re: WorkoutExercise = { exerciseId: ex.id, targetSets: 3, targetReps: 10, targetWeight: null, exercise: ex };
     setExercises((prev) => [...prev, re]);
     setSets((prev) => ({
       ...prev,
       [ex.id]: Array.from({ length: 3 }, (_, i) => ({
-        setNumber: i + 1, reps: 10, weight: 0, done: false, technique: 'NORMAL' as SetTechniqueKey, tempo: '',
+        setNumber: i + 1, reps: 10, weight: 0, done: false, technique: 'NORMAL', tempo: '',
       })),
     }));
     setShowAddExercise(false);
@@ -198,7 +162,7 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
       const res = await fetch('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routineId: routine.id || null, sets: allSets }),
+        body: JSON.stringify({ routineId: activeWorkout?.routine.id || null, sets: allSets }),
       });
 
       const data = await res.json();
@@ -206,6 +170,11 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
     } finally {
       setCompleting(false);
     }
+  }
+
+  function handleDiscard() {
+    clearWorkout();
+    onCancel();
   }
 
   const totalSets = Object.values(sets).flat().length;
@@ -223,7 +192,7 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
         {/* Header */}
         <div className="flex items-center justify-between py-3 mb-2 sticky top-0 bg-dark-bg z-10 border-b border-dark-border">
           <div>
-            <h2 className="font-bold text-slate-100">{routine.name}</h2>
+            <h2 className="font-bold text-slate-100">{activeWorkout?.routine.name}</h2>
             <p className="text-xs text-slate-500">{t('session.setsDone', { done: doneSets, total: totalSets })}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -237,7 +206,10 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
                 {formatTime(restCountdown)}
               </div>
             )}
-            <button onClick={onCancel} className="text-slate-500 hover:text-red-400 transition-colors p-1">
+            <button
+              onClick={() => setShowNavGuard(true)}
+              className="text-slate-500 hover:text-red-400 transition-colors p-1"
+            >
               <X size={18} />
             </button>
           </div>
@@ -281,8 +253,24 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
         </div>
       </div>
 
+      {/* Nav guard dialog (z-[110] to stack above the z-[100] workout overlay) */}
+      <Modal open={showNavGuard} onClose={() => setShowNavGuard(false)} title={t('workout.navGuardTitle')} zClass="z-[110]">
+        <p className="text-sm text-slate-400 mb-4">{t('workout.navGuardMessage')}</p>
+        <div className="flex flex-col gap-2">
+          <NeonButton variant="cyan" className="w-full" onClick={() => { minimizeWorkout(); setShowNavGuard(false); }}>
+            {t('workout.minimize')}
+          </NeonButton>
+          <NeonButton variant="danger" className="w-full" onClick={handleDiscard}>
+            {t('workout.discard')}
+          </NeonButton>
+          <NeonButton variant="ghost" className="w-full" onClick={() => setShowNavGuard(false)}>
+            {t('workout.cancel')}
+          </NeonButton>
+        </div>
+      </Modal>
+
       {/* Result modal */}
-      <Modal open={!!showResult} onClose={() => { setShowResult(null); onComplete(); }} title={t('session.workoutCompleteTitle')}>
+      <Modal open={!!showResult} onClose={() => { setShowResult(null); clearWorkout(); onComplete(); }} title={t('session.workoutCompleteTitle')} zClass="z-[110]">
         {showResult && (
           <div className="text-center space-y-4">
             <p className="text-4xl">🎉</p>
@@ -303,7 +291,7 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
               </div>
             )}
             <p className="text-xs text-slate-500">{t('session.duration')}: {formatTime(elapsed)}</p>
-            <NeonButton variant="green" className="w-full" onClick={() => { setShowResult(null); onComplete(); }}>
+            <NeonButton variant="green" className="w-full" onClick={() => { setShowResult(null); clearWorkout(); onComplete(); }}>
               {t('session.awesome')}
             </NeonButton>
           </div>
@@ -311,7 +299,7 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
       </Modal>
 
       {/* Add exercise modal */}
-      <Modal open={showAddExercise} onClose={() => { setShowAddExercise(false); setExSearch(''); }} title={t('session.addExerciseTitle')}>
+      <Modal open={showAddExercise} onClose={() => { setShowAddExercise(false); setExSearch(''); }} title={t('session.addExerciseTitle')} zClass="z-[110]">
         <div className="space-y-3">
           <NeonInput
             placeholder={t('session.searchPlaceholder')}
@@ -345,8 +333,8 @@ export function WorkoutSession({ routine, day, isQuick, onComplete, onCancel }: 
 function ExerciseCard({
   exercise, sets, onToggle, onUpdate, onAddSet, onRemoveSet, onUpdateTechnique, onUpdateTempo,
 }: {
-  exercise: Exercise;
-  sets: SetEntry[];
+  exercise: { id: string; name: string; muscleGroup: string };
+  sets: WorkoutSetEntry[];
   onToggle: (i: number) => void;
   onUpdate: (i: number, field: 'reps' | 'weight', value: number) => void;
   onAddSet: () => void;
@@ -369,7 +357,6 @@ function ExerciseCard({
 
   return (
     <Card neon={doneSets === sets.length && sets.length > 0 ? 'green' : null}>
-      {/* Exercise header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
         {history?.pr && (
@@ -380,7 +367,6 @@ function ExerciseCard({
         )}
       </div>
 
-      {/* Previous workout reference */}
       {history?.lastSets && history.lastSets.length > 0 && (
         <div className="mb-3 p-2 rounded-lg bg-dark-bg/60 border border-dark-border">
           <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('session.lastWorkout')}</p>
@@ -409,7 +395,6 @@ function ExerciseCard({
         </div>
       )}
 
-      {/* Column headers */}
       <div className="grid grid-cols-[18px_1fr_60px_60px_22px_26px] gap-1.5 text-[10px] text-slate-500 uppercase tracking-wider mb-1 px-1">
         <span>#</span>
         <span></span>
@@ -421,31 +406,27 @@ function ExerciseCard({
 
       <div className="space-y-1">
         {sets.map((s, i) => {
-          const techStyle = TECHNIQUE_STYLES[s.technique];
+          const techStyle = TECHNIQUE_STYLES[s.technique as SetTechniqueKey];
           const isPickerOpen = techniquePickerFor === i;
           const hasTech = s.technique !== 'NORMAL';
 
           return (
             <div key={i}>
-              {/* Set row */}
               <div
                 className={cn(
                   'grid grid-cols-[18px_1fr_60px_60px_22px_26px] gap-1.5 items-center px-1 py-1.5 rounded-lg transition-colors',
-                  s.done ? 'bg-neon-green/10' : (techStyle.rowBg || 'bg-dark-muted'),
-                  hasTech && techStyle.rowBorder,
+                  s.done ? 'bg-neon-green/10' : (techStyle?.rowBg || 'bg-dark-muted'),
+                  hasTech && techStyle?.rowBorder,
                 )}
               >
                 <span className="text-xs text-slate-500 text-center">{s.setNumber}</span>
-
-                {/* Technique badge */}
                 <div className="min-w-0">
-                  {hasTech && (
+                  {hasTech && techStyle && (
                     <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold truncate block w-fit max-w-full', techStyle.badgeClass)}>
                       {t(techStyle.labelKey)}
                     </span>
                   )}
                 </div>
-
                 <input
                   type="number"
                   value={s.reps || ''}
@@ -463,24 +444,19 @@ function ExerciseCard({
                   onChange={(e) => onUpdate(i, 'weight', parseFloat(e.target.value) || 0)}
                   className="w-full text-center bg-dark-bg border border-dark-border rounded text-sm text-neon-green py-1 focus:outline-none focus:border-neon-green/50"
                 />
-
-                {/* ⚡ Technique button */}
                 <button
                   onClick={() => setTechniquePickerFor(isPickerOpen ? null : i)}
                   className={cn(
                     'w-5 h-5 flex items-center justify-center rounded transition-colors',
-                    hasTech
+                    hasTech && techStyle
                       ? techStyle.badgeClass
                       : isPickerOpen
                       ? 'text-neon-yellow bg-neon-yellow/10'
                       : 'text-slate-600 hover:text-neon-yellow',
                   )}
-                  title={t('tech.pickTitle')}
                 >
                   <Zap size={10} />
                 </button>
-
-                {/* Check button */}
                 <button
                   onClick={() => onToggle(i)}
                   className={cn(
@@ -494,7 +470,6 @@ function ExerciseCard({
                 </button>
               </div>
 
-              {/* Tempo input (when technique is TEMPO) */}
               {hasTech && s.technique === 'TEMPO' && !isPickerOpen && (
                 <div className="flex items-center gap-2 px-1 mt-0.5">
                   <span className="text-[10px] text-neon-yellow shrink-0">{t('tech.tempoLabel')}:</span>
@@ -508,7 +483,6 @@ function ExerciseCard({
                 </div>
               )}
 
-              {/* Technique picker */}
               {isPickerOpen && (
                 <div className="mt-1 p-2 rounded-lg bg-dark-bg border border-dark-border">
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('tech.pickTitle')}</p>
@@ -519,10 +493,7 @@ function ExerciseCard({
                       return (
                         <button
                           key={key}
-                          onClick={() => {
-                            onUpdateTechnique(i, key);
-                            setTechniquePickerFor(null);
-                          }}
+                          onClick={() => { onUpdateTechnique(i, key); setTechniquePickerFor(null); }}
                           title={t(style.descKey)}
                           className={cn(
                             'text-[10px] px-2 py-1 rounded-full border transition-all',
@@ -536,7 +507,6 @@ function ExerciseCard({
                       );
                     })}
                   </div>
-                  {/* Tempo input when TEMPO is already selected and picker is open */}
                   {s.technique === 'TEMPO' && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dark-border">
                       <span className="text-[10px] text-neon-yellow shrink-0">{t('tech.tempoLabel')}:</span>
@@ -556,7 +526,6 @@ function ExerciseCard({
         })}
       </div>
 
-      {/* Add / remove set */}
       <div className="flex gap-2 mt-2">
         <button onClick={onAddSet} className="text-xs text-slate-500 hover:text-neon-cyan transition-colors flex items-center gap-1">
           <Plus size={11} /> {t('session.addSet')}

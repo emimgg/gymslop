@@ -47,11 +47,19 @@ export async function POST(req: NextRequest) {
         const technique = s.technique ?? 'NORMAL';
         let isPR = false;
         if (technique === 'NORMAL') {
-          const pr = await prisma.workoutSet.findFirst({
-            where: { session: { userId }, exerciseId: s.exerciseId, technique: 'NORMAL' },
-            orderBy: { weight: 'desc' },
+          const previousSessionCount = await prisma.workoutSession.count({
+            where: {
+              userId,
+              sets: { some: { exerciseId: s.exerciseId } },
+            },
           });
-          isPR = !pr || s.weight > pr.weight;
+          if (previousSessionCount >= 2) {
+            const pr = await prisma.workoutSet.findFirst({
+              where: { session: { userId }, exerciseId: s.exerciseId, technique: 'NORMAL' },
+              orderBy: { weight: 'desc' },
+            });
+            isPR = !pr || s.weight > pr.weight;
+          }
         }
         return { ...s, technique, isPR };
       })

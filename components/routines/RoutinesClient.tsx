@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/Card';
 import { NeonButton } from '@/components/ui/NeonButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { RoutineBuilder } from './RoutineBuilder';
-import { WorkoutSession } from './WorkoutSession';
 import { VolumeAnalytics } from './VolumeAnalytics';
+import { useWorkoutStore } from '@/lib/workoutStore';
 import { QuickBuilder } from './QuickBuilder';
 import { Plus, Play, Pencil, Trash2, ChevronLeft, ChevronDown, Zap, Dumbbell, ListChecks, BookOpen } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
@@ -44,7 +44,38 @@ type EditDraft = {
   days: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight: number | null; exercise: Exercise }[] }[];
 };
 
-type View = 'list' | 'picker' | 'builder' | 'session';
+const TEMPLATE_SLUG: Record<string, string> = {
+  'Full Body':        'fullBody',
+  'Upper/Lower':      'upperLower',
+  'PPL':              'ppl',
+  'Brosplit':         'brosplit',
+  'Arnold Split':     'arnoldSplit',
+  'Antagonist Split': 'antagonistSplit',
+  'PHUL':             'phul',
+  'PHAT':             'phat',
+  'Glute Focus':      'gluteFocus',
+  'ULPPL':            'ulppl',
+};
+
+type SetTechniqueKey = string;
+
+function computeInitialSets(exercises: RoutineExercise[]) {
+  return Object.fromEntries(
+    exercises.map((re) => {
+      const presetTechniques = (re as { setTechniques?: string[] }).setTechniques ?? [];
+      return [re.exerciseId, Array.from({ length: re.targetSets }, (_, i) => ({
+        setNumber: i + 1,
+        reps: re.targetReps,
+        weight: 0,
+        done: false,
+        technique: (presetTechniques[i] as SetTechniqueKey) ?? 'NORMAL',
+        tempo: '',
+      }))];
+    })
+  );
+}
+
+type View = 'list' | 'picker' | 'builder';
 type MainTab = 'routines' | 'exercises';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -122,7 +153,9 @@ function TemplateCard({ template, onUse }: { template: RoutineTemplate; onUse: (
           <p className="text-xs text-slate-500 mb-1.5">
             {template.daysPerWeek} {t('routines.daysPerWeek')}
           </p>
-          <p className="text-xs text-slate-400 leading-relaxed">{template.description}</p>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {t(`routines.templates.${TEMPLATE_SLUG[template.name] ?? ''}.description`) || template.description}
+          </p>
         </div>
       </div>
 
@@ -179,11 +212,16 @@ function TemplateCard({ template, onUse }: { template: RoutineTemplate; onUse: (
 export function RoutinesClient() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const { startWorkout } = useWorkoutStore();
   const [mainTab, setMainTab] = useState<MainTab>('routines');
   const [view, setView] = useState<View>('list');
   const [editRoutine, setEditRoutine] = useState<EditDraft | null>(null);
-  const [activeSession, setActiveSession] = useState<{ routine: Routine; day: RoutineDay; isQuick: boolean } | null>(null);
   const [showQuickBuilder, setShowQuickBuilder] = useState(false);
+  const [templatesExpanded, setTemplatesExpanded] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem('gymtracker:templatesExpanded');
+    return stored !== null ? stored === 'true' : false;
+  });
 
   const { data: routines, isLoading } = useQuery<Routine[]>({
     queryKey: ['routines'],
@@ -198,6 +236,19 @@ export function RoutinesClient() {
 
   const todayDow = new Date().getDay();
 
+  useEffect(() => {
+    if (routines === undefined) return;
+    if (localStorage.getItem('gymtracker:templatesExpanded') === null) {
+      setTemplatesExpanded(routines.length === 0);
+    }
+  }, [routines]);
+
+  function toggleTemplates() {
+    const next = !templatesExpanded;
+    setTemplatesExpanded(next);
+    localStorage.setItem('gymtracker:templatesExpanded', String(next));
+  }
+
   async function deleteRoutine(id: string) {
     if (!confirm(t('routines.deleteConfirm'))) return;
     await fetch(`/api/routines/${id}`, { method: 'DELETE' });
@@ -206,15 +257,15 @@ export function RoutinesClient() {
   }
 
   function startSession(routine: Routine, day: RoutineDay) {
-    setActiveSession({ routine, day, isQuick: false });
-    setView('session');
+    const initialSets = computeInitialSets(day.exercises);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startWorkout(routine, day as any, false, day.exercises as any, initialSets);
   }
 
   function startQuickWorkout() {
-    const emptyDay: RoutineDay = { id: '', dayOfWeek: -1, exercises: [] };
-    const quickRoutine: Routine = { id: '', name: t('routines.quickWorkout'), days: [] };
-    setActiveSession({ routine: quickRoutine, day: emptyDay, isQuick: true });
-    setView('session');
+    const quickRoutine = { id: '', name: t('routines.quickWorkout') };
+    const emptyDay = { dayOfWeek: -1, exercises: [] };
+    startWorkout(quickRoutine, emptyDay, true, [], {});
   }
 
   function useTemplate(template: RoutineTemplate) {
@@ -234,18 +285,6 @@ export function RoutinesClient() {
     };
     setEditRoutine(draft);
     setView('builder');
-  }
-
-  if (view === 'session' && activeSession) {
-    return (
-      <WorkoutSession
-        routine={activeSession.routine}
-        day={activeSession.day}
-        isQuick={activeSession.isQuick}
-        onComplete={() => { setActiveSession(null); setView('list'); queryClient.invalidateQueries({ queryKey: ['dashboard'] }); }}
-        onCancel={() => { setActiveSession(null); setView('list'); }}
-      />
-    );
   }
 
   if (view === 'builder' || editRoutine) {
@@ -488,16 +527,44 @@ export function RoutinesClient() {
 
       {/* ── Common Routines (BELOW user routines) ─────────────────────────── */}
       {templates && templates.length > 0 && (
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center gap-2">
-            <BookOpen size={14} className="text-neon-purple" />
-            <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
-              {t('routines.commonRoutines')}
-            </h2>
-          </div>
-          {templates.map((template) => (
-            <TemplateCard key={template.id} template={template} onUse={() => useTemplate(template)} />
-          ))}
+        <div className="pt-2">
+          {count === 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <BookOpen size={14} className="text-neon-purple" />
+                <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                  {t('routines.commonRoutines')}
+                </h2>
+              </div>
+              {templates.map((template) => (
+                <TemplateCard key={template.id} template={template} onUse={() => useTemplate(template)} />
+              ))}
+            </div>
+          ) : (
+            <>
+              {templatesExpanded && (
+                <div className="space-y-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen size={14} className="text-neon-purple" />
+                    <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                      {t('routines.commonRoutines')}
+                    </h2>
+                  </div>
+                  {templates.map((template) => (
+                    <TemplateCard key={template.id} template={template} onUse={() => useTemplate(template)} />
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={toggleTemplates}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dark-border text-xs text-slate-500 hover:text-slate-300 hover:border-slate-600 transition-colors"
+              >
+                <BookOpen size={12} />
+                {templatesExpanded ? t('routines.hideTemplates') : t('routines.showTemplates')}
+                <ChevronDown size={12} className={cn('transition-transform', templatesExpanded && 'rotate-180')} />
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

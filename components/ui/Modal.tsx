@@ -10,9 +10,10 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  zClass?: string;
 }
 
-export function Modal({ open, onClose, title, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, children, className, zClass = 'z-50' }: ModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -30,7 +31,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className={cn('fixed inset-0 flex items-center justify-center p-4', zClass)}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
