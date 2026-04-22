@@ -1,3 +1,13 @@
+# HOLA PROFE - Primer parcial, Emiliano González
+Esta es una webapp (adaptada para PWA, para usar en mobile) que hice para mí y para dos amigos.
+Es un fit/health tracker, hechas a mi medida y segun mis preferencias de UI/UX.
+Esta hecho con Next.js, Tailwind, Prisma, Postgres en Neon.
+Como auth, utilicé NextAuth con los OAuth de Google y GitHub, para mucha menos fricción al crear cuenta.
+El deploy está hecho en Vercel, como podes observar en el domain.
+Es una webapp bastante grande y completa, implementé un sistema de gamificación para motivar a la consistencia en el gym y la dieta, te invito a que juegues con los diferentes modulos!!
+**Entrá a la página como invitada**, creé un user demo con fake data para que puedas visualizar la funcionalidad.
+Gracias profe, saludos!!
+
 # gymslop
 
 A full-stack gamified gym tracking app built with Next.js 14, Prisma, Neon PostgreSQL, and NextAuth.
