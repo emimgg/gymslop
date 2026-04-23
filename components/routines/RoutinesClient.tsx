@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { MG_CONFIG, COLOR_STYLES } from '@/lib/muscleGroupConfig';
 import { computeDaySummary } from '@/lib/routineAnalytics';
 import type { AnalyticsDay } from '@/lib/routineAnalytics';
+import { useUserProfile, getCalorieStatus, type CalorieStatus } from '@/lib/useAdvancedView';
 import toast from 'react-hot-toast';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -24,6 +25,9 @@ interface Exercise { id: string; name: string; muscleGroup: string; equipment: s
 interface RoutineExercise {
   id: string; exerciseId: string; order: number;
   targetSets: number; targetReps: number; targetWeight: number | null;
+  setTechniques?: string[];
+  targetRIR?: number | null;
+  targetRPE?: number | null;
   exercise: Exercise;
 }
 interface RoutineDay { id: string; dayOfWeek: number; exercises: RoutineExercise[]; }
@@ -62,17 +66,36 @@ type SetTechniqueKey = string;
 function computeInitialSets(exercises: RoutineExercise[]) {
   return Object.fromEntries(
     exercises.map((re) => {
-      const presetTechniques = (re as { setTechniques?: string[] }).setTechniques ?? [];
-      return [re.exerciseId, Array.from({ length: re.targetSets }, (_, i) => ({
-        setNumber: i + 1,
-        reps: re.targetReps,
-        weight: 0,
-        done: false,
-        technique: (presetTechniques[i] as SetTechniqueKey) ?? 'NORMAL',
-        tempo: '',
-      }))];
+      const presetTechniques = re.setTechniques ?? [];
+      return [re.exerciseId, Array.from({ length: re.targetSets }, (_, i) => {
+        const presetTech = (presetTechniques[i] as SetTechniqueKey) ?? 'NORMAL';
+        return {
+          setNumber: i + 1,
+          reps: re.targetReps,
+          weight: 0,
+          done: false,
+          technique: 'NORMAL',
+          attachedTechnique: presetTech !== 'NORMAL' ? presetTech : undefined,
+          tempo: '',
+          targetRIR: re.targetRIR ?? undefined,
+          targetRPE: re.targetRPE ?? undefined,
+        };
+      })];
     })
   );
+}
+
+function computeInitialExercises(exercises: RoutineExercise[]) {
+  return exercises.map((re) => ({
+    exerciseId: re.exerciseId,
+    targetSets: re.targetSets,
+    targetReps: re.targetReps,
+    targetWeight: re.targetWeight,
+    setTechniques: re.setTechniques,
+    targetRIR: re.targetRIR ?? undefined,
+    targetRPE: re.targetRPE ?? undefined,
+    exercise: re.exercise,
+  }));
 }
 
 type View = 'list' | 'picker' | 'builder';
@@ -131,13 +154,27 @@ function DayMuscleTags({ exercises, t }: { exercises: { muscleGroup: string }[];
   );
 }
 
+function getCalorieBadge(daysPerWeek: number, calorieStatus: CalorieStatus): string | null {
+  if (calorieStatus === 'deficit' && daysPerWeek <= 4) return 'routines.badge.deficit';
+  if (calorieStatus === 'surplus' && daysPerWeek >= 5) return 'routines.badge.surplus';
+  if (calorieStatus === 'maintenance' && daysPerWeek === 4) return 'routines.badge.maintenance';
+  return null;
+}
+
 // ── TemplateCard ───────────────────────────────────────────────────────────
 
-function TemplateCard({ template, onUse }: { template: RoutineTemplate; onUse: () => void }) {
+function TemplateCard({
+  template, calorieStatus, onUse,
+}: {
+  template: RoutineTemplate;
+  calorieStatus: CalorieStatus;
+  onUse: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const { t } = useI18n();
   const badgeClass = DIFFICULTY_STYLES[template.difficulty] ?? DIFFICULTY_STYLES.Intermediate;
   const analyticsDays = templateToAnalyticsDays(template);
+  const calorieBadgeKey = getCalorieBadge(template.daysPerWeek, calorieStatus);
 
   return (
     <Card>
@@ -149,6 +186,19 @@ function TemplateCard({ template, onUse }: { template: RoutineTemplate; onUse: (
             <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0', badgeClass)}>
               {t(`routines.difficulty.${template.difficulty}`)}
             </span>
+            {calorieBadgeKey && (
+              <span className={cn(
+                'text-[9px] px-2 py-0.5 rounded-full font-semibold shrink-0 border',
+                calorieStatus === 'deficit'
+                  ? 'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow'
+                  : calorieStatus === 'surplus'
+                  ? 'border-neon-green/40 bg-neon-green/10 text-neon-green'
+                  : 'border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan',
+              )}>
+                {calorieStatus === 'deficit' ? '📉' : calorieStatus === 'surplus' ? '📈' : '⚖️'}{' '}
+                {t(calorieBadgeKey as never)}
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mb-1.5">
             {template.daysPerWeek} {t('routines.daysPerWeek')}
@@ -234,6 +284,9 @@ export function RoutinesClient() {
     staleTime: Infinity,
   });
 
+  const { data: userProfile } = useUserProfile();
+  const calorieStatus: CalorieStatus = getCalorieStatus(userProfile?.weeklyGoalKg);
+
   const todayDow = new Date().getDay();
 
   useEffect(() => {
@@ -258,8 +311,8 @@ export function RoutinesClient() {
 
   function startSession(routine: Routine, day: RoutineDay) {
     const initialSets = computeInitialSets(day.exercises);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    startWorkout(routine, day as any, false, day.exercises as any, initialSets);
+    const initialExercises = computeInitialExercises(day.exercises);
+    startWorkout(routine, day as never, false, initialExercises, initialSets);
   }
 
   function startQuickWorkout() {
@@ -537,7 +590,7 @@ export function RoutinesClient() {
                 </h2>
               </div>
               {templates.map((template) => (
-                <TemplateCard key={template.id} template={template} onUse={() => useTemplate(template)} />
+                <TemplateCard key={template.id} template={template} calorieStatus={calorieStatus} onUse={() => useTemplate(template)} />
               ))}
             </div>
           ) : (
@@ -551,7 +604,7 @@ export function RoutinesClient() {
                     </h2>
                   </div>
                   {templates.map((template) => (
-                    <TemplateCard key={template.id} template={template} onUse={() => useTemplate(template)} />
+                    <TemplateCard key={template.id} template={template} calorieStatus={calorieStatus} onUse={() => useTemplate(template)} />
                   ))}
                 </div>
               )}

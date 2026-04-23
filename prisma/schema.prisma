@@ -75,6 +75,9 @@ model User {
   weeklyGoalKg   Float?     // negative = cut, positive = bulk, 0 = maintain
   caloricTarget  Int?       // daily kcal target (computed from TDEE + weekly goal)
 
+  // Preferences
+  advancedView   Boolean    @default(false)
+
   accounts       Account[]
   sessions       Session[]
   routines       Routine[]
@@ -177,6 +180,8 @@ model RoutineExercise {
   targetReps    Int      @default(10)
   targetWeight  Float?
   setTechniques String[] @default([])
+  targetRIR     Int?     // Reps In Reserve target (0-5)
+  targetRPE     Int?     // Rate of Perceived Exertion target (6-10)
   routineDay    RoutineDay @relation(fields: [routineDayId], references: [id], onDelete: Cascade)
   exercise      Exercise   @relation(fields: [exerciseId], references: [id])
 
@@ -199,19 +204,24 @@ model WorkoutSession {
 }
 
 model WorkoutSet {
-  id         String         @id @default(cuid())
-  sessionId  String
-  exerciseId String
-  setNumber  Int
-  reps       Int
-  weight     Float
-  isWarmup   Boolean        @default(false)
-  isPR       Boolean        @default(false)
-  technique  String         @default("NORMAL")
-  tempo      String?
-  createdAt  DateTime       @default(now())
-  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  exercise   Exercise       @relation(fields: [exerciseId], references: [id])
+  id                String         @id @default(cuid())
+  sessionId         String
+  exerciseId        String
+  setNumber         Int
+  reps              Int
+  weight            Float
+  isWarmup          Boolean        @default(false)
+  isPR              Boolean        @default(false)
+  technique         String         @default("NORMAL")
+  attachedTechnique String?        // intensity technique attached to this normal set
+  tempo             String?
+  targetRIR         Int?           // planned Reps In Reserve
+  targetRPE         Int?           // planned Rate of Perceived Exertion
+  actualRIR         Int?           // recorded RIR after set
+  actualRPE         Int?           // recorded RPE after set
+  createdAt         DateTime       @default(now())
+  session           WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise          Exercise       @relation(fields: [exerciseId], references: [id])
 
   @@index([sessionId])
   @@index([exerciseId])

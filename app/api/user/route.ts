@@ -27,6 +27,7 @@ export async function GET() {
         avgSessionDurationMin: true,
         weeklyGoalKg: true,
         caloricTarget: true,
+        advancedView: true,
         createdAt: true,
       },
     });
@@ -43,7 +44,7 @@ export async function PATCH(req: NextRequest) {
     const {
       goalWeight, startingWeight, heightCm, name, age, sex, activityLevel,
       stepsPerWeek, liftingSessionsPerWeek, avgSessionDurationMin,
-      weeklyGoalKg, caloricTarget,
+      weeklyGoalKg, caloricTarget, advancedView,
     } = body;
 
     const user = await prisma.user.update({
@@ -61,6 +62,7 @@ export async function PATCH(req: NextRequest) {
         ...(avgSessionDurationMin != null && { avgSessionDurationMin: parseInt(avgSessionDurationMin) }),
         ...(weeklyGoalKg != null && { weeklyGoalKg: parseFloat(weeklyGoalKg) }),
         ...(caloricTarget != null && { caloricTarget: parseInt(caloricTarget) }),
+        ...(advancedView != null && { advancedView: Boolean(advancedView) }),
       },
     });
 

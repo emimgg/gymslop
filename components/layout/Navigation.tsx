@@ -9,7 +9,7 @@ import { useI18n } from '@/components/providers/I18nProvider';
 import { type Lang } from '@/lib/i18n';
 import {
   LayoutDashboard, Dumbbell, UtensilsCrossed,
-  Scale, Heart, TrendingUp, Trophy, Users,
+  Scale, Heart, TrendingUp, Trophy, Users, Settings,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useWorkoutStore } from '@/lib/workoutStore';
@@ -112,6 +112,21 @@ export function Navigation() {
             );
           })}
         </nav>
+
+        {/* Settings */}
+        <Link
+          href="/settings"
+          onClick={(e) => handleNavClick(e, '/settings')}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mt-1',
+            pathname.startsWith('/settings')
+              ? 'bg-neon-green/10 text-neon-green border border-neon-green/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-dark-hover'
+          )}
+        >
+          <Settings size={16} />
+          <span className="flex-1">{t('nav.settings')}</span>
+        </Link>
 
         {/* Theme switcher */}
         <div className="mt-6 px-3 border-t border-dark-border pt-4">

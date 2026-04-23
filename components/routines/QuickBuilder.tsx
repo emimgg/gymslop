@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
 import {
   BuilderConfig, DBExercise, GeneratedRoutine, GeneratedExercise,
-  Focus, SplitType, EquipmentLevel,
+  Focus, SplitType, EquipmentLevel, CalorieStatus,
   generateRoutine, getAlternatives,
 } from '@/lib/quickBuilderLogic';
+import { useUserProfile, getCalorieStatus } from '@/lib/useAdvancedView';
 import toast from 'react-hot-toast';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -184,6 +185,9 @@ export function QuickBuilder({ onClose }: { onClose: () => void }) {
     staleTime: Infinity,
   });
 
+  const { data: userProfile } = useUserProfile();
+  const calorieStatus: CalorieStatus = getCalorieStatus(userProfile?.weeklyGoalKg);
+
   function handleDaySelect(days: 3 | 4 | 5 | 6) {
     const splitType = DEFAULT_SPLIT[days];
     setConfig((c) => ({ ...c, daysPerWeek: days, splitType }));
@@ -195,7 +199,7 @@ export function QuickBuilder({ onClose }: { onClose: () => void }) {
     setStep(5);
     setGenerating(true);
     setTimeout(() => {
-      const result = generateRoutine(config, exercises);
+      const result = generateRoutine(config, exercises, calorieStatus);
       setRoutine(result);
       setRoutineName(result.name);
       setGenerating(false);
@@ -477,6 +481,17 @@ export function QuickBuilder({ onClose }: { onClose: () => void }) {
                 <>
                   <div>
                     <h2 className="font-bold text-slate-100">{t('qb.s5Title')}</h2>
+                    {calorieStatus !== 'maintenance' && (
+                      <div className={cn(
+                        'mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border text-[11px] font-medium',
+                        calorieStatus === 'deficit'
+                          ? 'border-neon-yellow/40 bg-neon-yellow/10 text-neon-yellow'
+                          : 'border-neon-green/40 bg-neon-green/10 text-neon-green',
+                      )}>
+                        <span>{calorieStatus === 'deficit' ? '📉' : '📈'}</span>
+                        {t(`qb.calorieNote.${calorieStatus}` as never)}
+                      </div>
+                    )}
                     <input
                       value={routineName}
                       onChange={(e) => setRoutineName(e.target.value)}

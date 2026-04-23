@@ -36,17 +36,19 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id;
     const body = await req.json();
     const { routineId, sets } = body;
-    // sets: [{ exerciseId, setNumber, reps, weight, isWarmup, technique?, tempo? }]
+    // sets: [{ exerciseId, setNumber, reps, weight, isWarmup, technique?, attachedTechnique?, tempo?, targetRIR?, targetRPE?, actualRIR?, actualRPE? }]
 
-    // PR check only on NORMAL sets — intensity technique sets never overwrite clean PRs
+    // PR check only on NORMAL sets — technique attachments are ignored for PR detection
     const setsWithPr = await Promise.all(
       (sets ?? []).map(async (s: {
         exerciseId: string; setNumber: number; reps: number; weight: number;
-        isWarmup: boolean; technique?: string; tempo?: string | null;
+        isWarmup: boolean; technique?: string; attachedTechnique?: string | null;
+        tempo?: string | null; targetRIR?: number | null; targetRPE?: number | null;
+        actualRIR?: number | null; actualRPE?: number | null;
       }) => {
-        const technique = s.technique ?? 'NORMAL';
+        const technique = 'NORMAL'; // always NORMAL — technique attachments live in attachedTechnique
         let isPR = false;
-        if (technique === 'NORMAL') {
+        if (true) {
           const previousSessionCount = await prisma.workoutSession.count({
             where: {
               userId,
@@ -82,8 +84,13 @@ export async function POST(req: NextRequest) {
             weight: s.weight,
             isWarmup: s.isWarmup ?? false,
             isPR: s.isPR,
-            technique: s.technique ?? 'NORMAL',
+            technique: 'NORMAL',
+            attachedTechnique: s.attachedTechnique ?? null,
             tempo: s.tempo ?? null,
+            targetRIR: s.targetRIR ?? null,
+            targetRPE: s.targetRPE ?? null,
+            actualRIR: s.actualRIR ?? null,
+            actualRPE: s.actualRPE ?? null,
           })),
         },
       },

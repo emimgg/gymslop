@@ -7,7 +7,12 @@ export interface WorkoutSetEntry {
   weight: number;
   done: boolean;
   technique: string;
+  attachedTechnique?: string; // intensity technique modifier attached to this set
   tempo: string;
+  targetRIR?: number;
+  targetRPE?: number;
+  actualRIR?: number;
+  actualRPE?: number;
 }
 
 export interface WorkoutExercise {
@@ -16,6 +21,8 @@ export interface WorkoutExercise {
   targetReps: number;
   targetWeight: number | null;
   setTechniques?: string[];
+  targetRIR?: number;
+  targetRPE?: number;
   exercise: { id: string; name: string; muscleGroup: string };
 }
 

@@ -5,7 +5,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { LogOut, User, TrendingUp, Trophy, Users } from 'lucide-react';
+import { LogOut, User, TrendingUp, Trophy, Users, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/components/providers/I18nProvider';
@@ -76,6 +76,19 @@ export function Header({ titleKey }: { titleKey: string }) {
                     {t('profile.myProfile')}
                   </Link>
                 )}
+                <Link
+                  href="/settings"
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-3 py-2 transition-colors text-sm',
+                    pathname.startsWith('/settings')
+                      ? 'text-neon-green'
+                      : 'text-slate-400 hover:text-neon-cyan hover:bg-dark-hover'
+                  )}
+                >
+                  <Settings size={14} />
+                  {t('nav.settings')}
+                </Link>
                 {/* Progress / Trophies / Social — mobile only (hidden from bottom nav) */}
                 <div className="lg:hidden border-t border-dark-border mt-1 pt-1">
                   <p className="px-3 pt-1 pb-1 text-[10px] text-slate-600 uppercase tracking-wider">{t('nav.more')}</p>

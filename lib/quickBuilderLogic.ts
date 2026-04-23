@@ -4,6 +4,8 @@ export type Focus = 'STRENGTH' | 'HYPERTROPHY' | 'BOTH';
 export type SplitType = 'FULL_BODY' | 'UPPER_LOWER' | 'ULPPL' | 'PPL' | 'ARNOLD';
 export type EquipmentLevel = 'FULL' | 'NO_BARBELL' | 'DUMBBELLS' | 'BODYWEIGHT';
 
+export type CalorieStatus = 'deficit' | 'maintenance' | 'surplus';
+
 export interface BuilderConfig {
   daysPerWeek: 3 | 4 | 5 | 6;
   splitType: SplitType;
@@ -367,7 +369,15 @@ function pickFrom(
   return null;
 }
 
-function repsForSlot(isCompound: boolean, focus: Focus, dayLabel: string): { display: string; target: number } {
+const BIG_MUSCLES = new Set(['CHEST', 'BACK', 'QUADS', 'HAMSTRINGS', 'SHOULDERS']);
+const BIG_MUSCLE_WEEKLY_CAP = 24;
+
+function repsForSlot(
+  isCompound: boolean,
+  focus: Focus,
+  dayLabel: string,
+  calorieStatus?: CalorieStatus,
+): { display: string; target: number } {
   // Strength-label days use strength reps regardless of global focus
   const isStrengthDay = dayLabel.toLowerCase().includes('strength');
   const effectiveFocus: Focus = isStrengthDay ? 'STRENGTH' : focus;
@@ -378,6 +388,9 @@ function repsForSlot(isCompound: boolean, focus: Focus, dayLabel: string): { dis
       : { display: '6-8', target: 8 };
   }
   if (effectiveFocus === 'HYPERTROPHY') {
+    if (calorieStatus === 'deficit' && !isCompound) {
+      return { display: '8-12', target: 12 }; // lower rep range on accessories in deficit
+    }
     return isCompound
       ? { display: '6-10', target: 10 }
       : { display: '10-15', target: 15 };
@@ -445,10 +458,14 @@ const SPLIT_NAMES: Record<SplitType, string> = {
 export function generateRoutine(
   config: BuilderConfig,
   exercises: DBExercise[],
+  calorieStatus?: CalorieStatus,
 ): GeneratedRoutine {
   const exMap = buildExerciseMap(exercises, config.equipmentLevel);
   const splitDays = getSplitDays(config);
   const generatedDays: GeneratedDay[] = [];
+
+  // Track weekly sets per muscle for surplus cap
+  const weeklySetsByMuscle: Record<string, number> = {};
 
   for (const dayDef of splitDays) {
     const usedNames = new Set<string>();
@@ -459,8 +476,23 @@ export function generateRoutine(
       if (!ex) continue;
 
       const bonus = isPriorityMuscle(slot.muscle, config.priorityMuscles) ? 1 : 0;
-      const sets = slot.sets + bonus;
-      const reps = repsForSlot(slot.isCompound, config.focus, dayDef.label);
+
+      // Calorie-status set adjustment
+      let setAdjust = 0;
+      if (calorieStatus === 'deficit') {
+        setAdjust = -1; // all slots get -1 in deficit
+      } else if (calorieStatus === 'surplus' && slot.isCompound) {
+        // +1 for compounds in surplus, but respect weekly cap for big muscles
+        const projectedWeekly = (weeklySetsByMuscle[slot.muscle] ?? 0) + slot.sets + bonus + 1;
+        if (!BIG_MUSCLES.has(slot.muscle) || projectedWeekly <= BIG_MUSCLE_WEEKLY_CAP) {
+          setAdjust = 1;
+        }
+      }
+
+      const sets = Math.max(2, slot.sets + bonus + setAdjust);
+      weeklySetsByMuscle[slot.muscle] = (weeklySetsByMuscle[slot.muscle] ?? 0) + sets;
+
+      const reps = repsForSlot(slot.isCompound, config.focus, dayDef.label, calorieStatus);
 
       generatedExercises.push({
         exerciseId: ex.id,

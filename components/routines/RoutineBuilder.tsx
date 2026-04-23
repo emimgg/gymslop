@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MG_CONFIG, COLOR_STYLES } from '@/lib/muscleGroupConfig';
+import { useAdvancedView } from '@/lib/useAdvancedView';
 import { cn } from '@/lib/utils';
 import {
   DndContext,
@@ -40,6 +41,8 @@ interface ExerciseRow {
   targetReps: number;
   targetWeight: number | null;
   setTechniques: SetTechniqueKey[];
+  targetRIR?: number | null;
+  targetRPE?: number | null;
 }
 
 interface DayPlan {
@@ -92,10 +95,11 @@ function ExercisePickerRow({
 }
 
 function SortableExerciseRow({
-  id, ex, dow, idx, t, onUpdate, onUpdateTechniques, onRemove,
+  id, ex, dow, idx, t, advancedView, onUpdate, onUpdateTechniques, onRemove,
 }: {
   id: string; ex: ExerciseRow; dow: number; idx: number;
   t: (k: string) => string;
+  advancedView: boolean;
   onUpdate: (dow: number, idx: number, field: keyof ExerciseRow, val: string | number | null) => void;
   onUpdateTechniques: (dow: number, idx: number, techniques: SetTechniqueKey[]) => void;
   onRemove: (dow: number, idx: number) => void;
@@ -147,6 +151,36 @@ function SortableExerciseRow({
           </button>
         </div>
       </div>
+
+      {/* RIR / RPE (Advanced View only) */}
+      {advancedView && (
+        <div className="mt-1.5 ml-5 flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-slate-500">RIR:</span>
+            <input
+              type="number"
+              min={0} max={5}
+              placeholder="—"
+              value={ex.targetRIR ?? ''}
+              onChange={(e) => onUpdate(dow, idx, 'targetRIR', e.target.value === '' ? null : parseInt(e.target.value))}
+              className="w-10 text-center bg-dark-bg border border-dark-border rounded text-[10px] text-neon-purple py-0.5 focus:outline-none focus:border-neon-purple/50"
+              title={t('builder.rirTarget')}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-slate-500">RPE:</span>
+            <input
+              type="number"
+              min={6} max={10}
+              placeholder="—"
+              value={ex.targetRPE ?? ''}
+              onChange={(e) => onUpdate(dow, idx, 'targetRPE', e.target.value === '' ? null : parseInt(e.target.value))}
+              className="w-10 text-center bg-dark-bg border border-dark-border rounded text-[10px] text-neon-pink py-0.5 focus:outline-none focus:border-neon-pink/50"
+              title={t('builder.rpeTarget')}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Per-set technique dots (always visible when any non-NORMAL) */}
       {(hasAnyTech || techPickerFor != null) && (
@@ -232,6 +266,8 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
   const [saving, setSaving] = useState(false);
   const [exSearch, setExSearch] = useState('');
   const [customEx, setCustomEx] = useState({ name: '', muscleGroup: 'CHEST', equipment: 'BARBELL' });
+  const [targetDays, setTargetDays] = useState<number[]>([]);
+  const advancedView = useAdvancedView();
   const [creatingCustom, setCreatingCustom] = useState(false);
 
   const { data: exercises } = useQuery<Exercise[]>({
@@ -276,11 +312,18 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
     }
   }
 
+  function openAddExercise() {
+    // Default target days to currently selected day
+    setTargetDays(selectedDay != null ? [selectedDay] : days.map((d) => d.dayOfWeek));
+    setShowAddExercise(true);
+  }
+
   function addExercise(exercise: Exercise) {
-    if (selectedDay == null) return;
+    const effectiveDays = targetDays.length > 0 ? targetDays : (selectedDay != null ? [selectedDay] : []);
+    if (effectiveDays.length === 0) return;
     setDays(
       days.map((d) =>
-        d.dayOfWeek === selectedDay
+        effectiveDays.includes(d.dayOfWeek)
           ? {
               ...d,
               exercises: [
@@ -293,6 +336,10 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
     );
     setShowAddExercise(false);
     setExSearch('');
+    if (effectiveDays.length > 1) {
+      const dayNames = effectiveDays.map((dow) => t(`dayFull.${dow}`)).join(', ');
+      toast.success(t('builder.addedToDays', { days: dayNames }));
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -381,6 +428,8 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
             targetReps: e.targetReps,
             targetWeight: e.targetWeight,
             setTechniques: e.setTechniques,
+            targetRIR: e.targetRIR ?? null,
+            targetRPE: e.targetRPE ?? null,
           })),
         })),
       };
@@ -460,7 +509,7 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
         <Card>
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-slate-200">{t(`dayFull.${selectedDay}`)}</h3>
-            <NeonButton variant="cyan" size="sm" onClick={() => setShowAddExercise(true)}>
+            <NeonButton variant="cyan" size="sm" onClick={openAddExercise}>
               <Plus size={12} /> {t('builder.addExercise')}
             </NeonButton>
           </div>
@@ -507,6 +556,7 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
                     dow={selectedDay}
                     idx={idx}
                     t={t}
+                    advancedView={advancedView}
                     onUpdate={updateExercise}
                     onUpdateTechniques={updateExerciseTechniques}
                     onRemove={removeExercise}
@@ -529,6 +579,35 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
       {/* Add exercise modal */}
       <Modal open={showAddExercise} onClose={() => { setShowAddExercise(false); setExSearch(''); }} title={t('builder.addExerciseTitle')}>
         <div className="space-y-3">
+          {/* Day selector */}
+          {days.length > 1 && (
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('builder.targetDays')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {days.sort((a, b) => a.dayOfWeek - b.dayOfWeek).map((d) => {
+                  const checked = targetDays.includes(d.dayOfWeek);
+                  return (
+                    <button
+                      key={d.dayOfWeek}
+                      onClick={() => setTargetDays(
+                        checked
+                          ? targetDays.filter((x) => x !== d.dayOfWeek)
+                          : [...targetDays, d.dayOfWeek]
+                      )}
+                      className={cn(
+                        'px-2.5 py-1 rounded-lg border text-xs font-medium transition-all',
+                        checked
+                          ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
+                          : 'border-dark-border text-slate-400 hover:border-slate-500',
+                      )}
+                    >
+                      {t(`day.${d.dayOfWeek}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <NeonInput
             placeholder={t('builder.searchPlaceholder')}
             value={exSearch}

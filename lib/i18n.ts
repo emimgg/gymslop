@@ -682,6 +682,7 @@ const es = {
   'session.removeLast': 'Quitar última',
   'session.lastWorkout': 'Última sesión',
   'session.noPrevRecord': 'Sin registro previo',
+  'session.thisDayScope': 'este día',
   'session.reps': 'Reps',
 
   // Progress
@@ -755,6 +756,54 @@ const es = {
   'login.continueGoogle': 'Continuar con Google',
   'login.continueGithub': 'Continuar con GitHub',
   'login.private': 'Tus datos son privados y solo visibles para vos.',
+
+  // Settings
+  'nav.settings': 'Configuración',
+  'settings.title': 'Configuración',
+  'settings.profile': 'Perfil',
+  'settings.preferences': 'Preferencias',
+  'settings.view': 'Vista',
+  'settings.account': 'Cuenta',
+  'settings.advancedView': 'Vista avanzada',
+  'settings.advancedViewDesc': 'Desbloquea análisis de volumen, RIR/RPE y herramientas avanzadas en todas las pestañas.',
+  'settings.saved': '¡Guardado!',
+  'settings.language': 'Idioma',
+  'settings.theme': 'Tema',
+  'settings.displayName': 'Nombre de usuario',
+  'settings.displayNamePlaceholder': 'Tu nombre',
+  'settings.signOut': 'Cerrar sesión',
+  'settings.advancedOff': 'OFF — interfaz simple y limpia',
+  'settings.advancedOn': 'ON — herramientas avanzadas habilitadas',
+
+  // Calorie-aware volume
+  'qb.calorieNote.deficit': 'Volumen ajustado para déficit calórico',
+  'qb.calorieNote.maintenance': 'Volumen para mantenimiento calórico',
+  'qb.calorieNote.surplus': 'Volumen ajustado para superávit calórico',
+  'routines.badge.deficit': 'Recomendado para déficit',
+  'routines.badge.surplus': 'Recomendado para volumen',
+  'routines.badge.maintenance': 'Para mantenimiento',
+
+  // Multi-day exercise assignment
+  'builder.addToDays': 'Agregar a días',
+  'builder.targetDays': 'Días destino',
+  'builder.addedToDays': 'Agregado a {{days}}',
+
+  // RIR / RPE
+  'rir.label': 'RIR',
+  'rpe.label': 'RPE',
+  'rir.target': 'Obj: RIR {{n}}',
+  'rpe.target': 'Obj: RPE {{n}}',
+  'rir.actual': 'RIR real',
+  'rpe.actual': 'RPE real',
+  'builder.rirRpeMode': 'RIR / RPE',
+  'builder.rirTarget': 'RIR objetivo (0-5)',
+  'builder.rpeTarget': 'RPE objetivo (6-10)',
+  'builder.rirPlaceholder': 'ej. 2',
+  'builder.rpePlaceholder': 'ej. 8',
+
+  // Technique attachments
+  'tech.attachTitle': 'Técnica adjunta',
+  'tech.noAttachment': 'Sin técnica adjunta',
 } as const;
 
 const en: Record<keyof typeof es, string> = {
@@ -1332,6 +1381,7 @@ const en: Record<keyof typeof es, string> = {
   'session.addExerciseTitle': 'Add Exercise',
   'session.addSet': '+ Add set', 'session.removeLast': 'Remove last',
   'session.lastWorkout': 'Last workout', 'session.noPrevRecord': 'No previous record',
+  'session.thisDayScope': 'this day',
   'session.reps': 'Reps',
 
   'progress.prWall': 'PR Wall ({{n}})', 'progress.measurements': 'Measurements',
@@ -1393,6 +1443,54 @@ const en: Record<keyof typeof es, string> = {
   'login.continueGoogle': 'Continue with Google',
   'login.continueGithub': 'Continue with GitHub',
   'login.private': 'Your data is private and only visible to you.',
+
+  // Settings
+  'nav.settings': 'Settings',
+  'settings.title': 'Settings',
+  'settings.profile': 'Profile',
+  'settings.preferences': 'Preferences',
+  'settings.view': 'View',
+  'settings.account': 'Account',
+  'settings.advancedView': 'Advanced View',
+  'settings.advancedViewDesc': 'Unlocks volume analytics, RIR/RPE, and advanced tools across all tabs.',
+  'settings.saved': 'Saved!',
+  'settings.language': 'Language',
+  'settings.theme': 'Theme',
+  'settings.displayName': 'Display Name',
+  'settings.displayNamePlaceholder': 'Your name',
+  'settings.signOut': 'Sign out',
+  'settings.advancedOff': 'OFF — simple, clean interface',
+  'settings.advancedOn': 'ON — advanced tools enabled',
+
+  // Calorie-aware volume
+  'qb.calorieNote.deficit': 'Volume adjusted for caloric deficit',
+  'qb.calorieNote.maintenance': 'Volume for caloric maintenance',
+  'qb.calorieNote.surplus': 'Volume adjusted for caloric surplus',
+  'routines.badge.deficit': 'Recommended for deficit',
+  'routines.badge.surplus': 'Recommended for volume',
+  'routines.badge.maintenance': 'For maintenance',
+
+  // Multi-day exercise assignment
+  'builder.addToDays': 'Add to days',
+  'builder.targetDays': 'Target days',
+  'builder.addedToDays': 'Added to {{days}}',
+
+  // RIR / RPE
+  'rir.label': 'RIR',
+  'rpe.label': 'RPE',
+  'rir.target': 'Target: RIR {{n}}',
+  'rpe.target': 'Target: RPE {{n}}',
+  'rir.actual': 'Actual RIR',
+  'rpe.actual': 'Actual RPE',
+  'builder.rirRpeMode': 'RIR / RPE',
+  'builder.rirTarget': 'Target RIR (0-5)',
+  'builder.rpeTarget': 'Target RPE (6-10)',
+  'builder.rirPlaceholder': 'e.g. 2',
+  'builder.rpePlaceholder': 'e.g. 8',
+
+  // Technique attachments
+  'tech.attachTitle': 'Attached technique',
+  'tech.noAttachment': 'No attached technique',
 };
 
 export const translations: Record<Lang, Record<string, string>> = { es, en };

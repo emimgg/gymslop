@@ -20,7 +20,8 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(npm i *)",
-      "Bash(vercel *)"
+      "Bash(vercel *)",
+      "Bash(npx dotenv *)"
     ]
   }
 }

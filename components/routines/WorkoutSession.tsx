@@ -11,6 +11,7 @@ import { useI18n } from '@/components/providers/I18nProvider';
 import { cn } from '@/lib/utils';
 import { TECHNIQUE_ORDER, TECHNIQUE_STYLES, type SetTechniqueKey } from '@/lib/techniques';
 import { useWorkoutStore, type WorkoutSetEntry, type WorkoutExercise } from '@/lib/workoutStore';
+import { useAdvancedView } from '@/lib/useAdvancedView';
 import toast from 'react-hot-toast';
 
 interface Exercise {
@@ -27,6 +28,7 @@ interface WorkoutSessionProps {
 export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
   const { t } = useI18n();
   const { activeWorkout, updateWorkoutState, minimizeWorkout, clearWorkout } = useWorkoutStore();
+  const advancedView = useAdvancedView();
 
   const [exercises, setExercises] = useState<WorkoutExercise[]>(activeWorkout?.exercises ?? []);
   const [sets, setSets] = useState<Record<string, WorkoutSetEntry[]>>(activeWorkout?.sets ?? {});
@@ -86,10 +88,28 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
     }));
   }
 
-  function updateTechnique(exerciseId: string, setIdx: number, technique: SetTechniqueKey) {
+  function updateAttachedTechnique(exerciseId: string, setIdx: number, technique: SetTechniqueKey) {
     setSets((prev) => ({
       ...prev,
-      [exerciseId]: prev[exerciseId].map((s, i) => i === setIdx ? { ...s, technique } : s),
+      [exerciseId]: prev[exerciseId].map((s, i) =>
+        i === setIdx
+          ? { ...s, technique: 'NORMAL', attachedTechnique: technique === 'NORMAL' ? undefined : technique }
+          : s
+      ),
+    }));
+  }
+
+  function updateActualRIR(exerciseId: string, setIdx: number, val: number | undefined) {
+    setSets((prev) => ({
+      ...prev,
+      [exerciseId]: prev[exerciseId].map((s, i) => i === setIdx ? { ...s, actualRIR: val } : s),
+    }));
+  }
+
+  function updateActualRPE(exerciseId: string, setIdx: number, val: number | undefined) {
+    setSets((prev) => ({
+      ...prev,
+      [exerciseId]: prev[exerciseId].map((s, i) => i === setIdx ? { ...s, actualRPE: val } : s),
     }));
   }
 
@@ -108,7 +128,7 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
         ...prev,
         [exerciseId]: [
           ...current,
-          { setNumber: current.length + 1, reps: last?.reps ?? 10, weight: last?.weight ?? 0, done: false, technique: 'NORMAL', tempo: '' },
+          { setNumber: current.length + 1, reps: last?.reps ?? 10, weight: last?.weight ?? 0, done: false, technique: 'NORMAL', attachedTechnique: undefined, tempo: '' },
         ],
       };
     });
@@ -129,7 +149,7 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
     setSets((prev) => ({
       ...prev,
       [ex.id]: Array.from({ length: 3 }, (_, i) => ({
-        setNumber: i + 1, reps: 10, weight: 0, done: false, technique: 'NORMAL', tempo: '',
+        setNumber: i + 1, reps: 10, weight: 0, done: false, technique: 'NORMAL', attachedTechnique: undefined, tempo: '',
       })),
     }));
     setShowAddExercise(false);
@@ -148,8 +168,13 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
             reps: s.reps,
             weight: s.weight,
             isWarmup: false,
-            technique: s.technique,
+            technique: 'NORMAL',
+            attachedTechnique: s.attachedTechnique ?? null,
             tempo: s.tempo || null,
+            targetRIR: s.targetRIR ?? null,
+            targetRPE: s.targetRPE ?? null,
+            actualRIR: s.actualRIR ?? null,
+            actualRPE: s.actualRPE ?? null,
           }))
       );
 
@@ -229,13 +254,18 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
             <ExerciseCard
               key={re.exerciseId}
               exercise={re.exercise}
+              targetRIR={re.targetRIR}
+              targetRPE={re.targetRPE}
               sets={sets[re.exerciseId] ?? []}
+              advancedView={advancedView}
               onToggle={(i) => toggleSet(re.exerciseId, i)}
               onUpdate={(i, f, v) => updateSet(re.exerciseId, i, f, v)}
               onAddSet={() => addSet(re.exerciseId)}
               onRemoveSet={(i) => removeSet(re.exerciseId, i)}
-              onUpdateTechnique={(i, tech) => updateTechnique(re.exerciseId, i, tech)}
+              onUpdateTechnique={(i, tech) => updateAttachedTechnique(re.exerciseId, i, tech)}
               onUpdateTempo={(i, tempo) => updateTempo(re.exerciseId, i, tempo)}
+              onUpdateActualRIR={(i, val) => updateActualRIR(re.exerciseId, i, val)}
+              onUpdateActualRPE={(i, val) => updateActualRPE(re.exerciseId, i, val)}
             />
           ))}
         </div>
@@ -331,26 +361,36 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
 // ── ExerciseCard ────────────────────────────────────────────────────────────
 
 function ExerciseCard({
-  exercise, sets, onToggle, onUpdate, onAddSet, onRemoveSet, onUpdateTechnique, onUpdateTempo,
+  exercise, sets, targetRIR, targetRPE, advancedView,
+  onToggle, onUpdate, onAddSet, onRemoveSet, onUpdateTechnique, onUpdateTempo,
+  onUpdateActualRIR, onUpdateActualRPE,
 }: {
   exercise: { id: string; name: string; muscleGroup: string };
   sets: WorkoutSetEntry[];
+  targetRIR?: number | null;
+  targetRPE?: number | null;
+  advancedView: boolean;
   onToggle: (i: number) => void;
   onUpdate: (i: number, field: 'reps' | 'weight', value: number) => void;
   onAddSet: () => void;
   onRemoveSet: (i: number) => void;
   onUpdateTechnique: (i: number, technique: SetTechniqueKey) => void;
   onUpdateTempo: (i: number, tempo: string) => void;
+  onUpdateActualRIR: (i: number, val: number | undefined) => void;
+  onUpdateActualRPE: (i: number, val: number | undefined) => void;
 }) {
   const { t } = useI18n();
   const [techniquePickerFor, setTechniquePickerFor] = useState<number | null>(null);
 
+  const weekday = new Date().getDay(); // 0=Sun, 1=Mon … 6=Sat — scopes Last/Best to this weekday
+
   const { data: history } = useQuery<{
-    lastSets: { setNumber: number; reps: number; weight: number; technique?: string }[];
+    lastSets: { setNumber: number; reps: number; weight: number; technique?: string; attachedTechnique?: string | null }[];
     pr: { reps: number; weight: number } | null;
   }>({
-    queryKey: ['exercise-history', exercise.id],
-    queryFn: () => fetch(`/api/workouts/history?exerciseId=${exercise.id}`).then((r) => r.json()),
+    queryKey: ['exercise-history', exercise.id, weekday],
+    queryFn: () =>
+      fetch(`/api/workouts/history?exerciseId=${exercise.id}&weekday=${weekday}`).then((r) => r.json()),
   });
 
   const doneSets = sets.filter((s) => s.done).length;
@@ -358,29 +398,43 @@ function ExerciseCard({
   return (
     <Card neon={doneSets === sets.length && sets.length > 0 ? 'green' : null}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
+          {advancedView && (targetRIR != null || targetRPE != null) && (
+            <p className="text-[10px] text-neon-purple mt-0.5">
+              {targetRIR != null && t('rir.target', { n: targetRIR })}
+              {targetRIR != null && targetRPE != null && ' · '}
+              {targetRPE != null && t('rpe.target', { n: targetRPE })}
+            </p>
+          )}
+        </div>
         {history?.pr && (
-          <span className="flex items-center gap-1 text-xs text-neon-yellow">
+          <span className="flex items-center gap-1 text-xs text-neon-yellow shrink-0">
             <Trophy size={10} />
             PR {history.pr.weight}kg × {history.pr.reps}
+            <span className="text-[9px] text-slate-500 font-normal">· {t('session.thisDayScope')}</span>
           </span>
         )}
       </div>
 
       {history?.lastSets && history.lastSets.length > 0 && (
         <div className="mb-3 p-2 rounded-lg bg-dark-bg/60 border border-dark-border">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('session.lastWorkout')}</p>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{t('session.lastWorkout')}</p>
+            <span className="text-[9px] text-slate-600">· {t('session.thisDayScope')}</span>
+          </div>
           <div className="flex flex-wrap gap-2">
             {history.lastSets.map((s) => {
-              const tech = (s.technique && s.technique !== 'NORMAL') ? s.technique as SetTechniqueKey : null;
-              const techStyle = tech ? TECHNIQUE_STYLES[tech] : null;
+              // Support both old technique field and new attachedTechnique field
+              const techKey = s.attachedTechnique || (s.technique && s.technique !== 'NORMAL' ? s.technique : null);
+              const techStyle = techKey ? TECHNIQUE_STYLES[techKey as SetTechniqueKey] : null;
               return (
                 <span key={s.setNumber} className="flex items-center gap-1 text-xs text-slate-400">
                   <span className="text-slate-600">{s.setNumber}.</span>
                   {s.weight}kg × {s.reps}
-                  {tech && techStyle && (
+                  {techKey && techStyle && (
                     <span className={cn('text-[9px] px-1 py-0.5 rounded-full border', techStyle.badgeClass)}>
-                      {t(techStyle.labelKey)}
+                      + {t(techStyle.labelKey)}
                     </span>
                   )}
                 </span>
@@ -406,24 +460,24 @@ function ExerciseCard({
 
       <div className="space-y-1">
         {sets.map((s, i) => {
-          const techStyle = TECHNIQUE_STYLES[s.technique as SetTechniqueKey];
+          const attachedTech = s.attachedTechnique as SetTechniqueKey | undefined;
+          const attachedStyle = attachedTech && attachedTech !== 'NORMAL' ? TECHNIQUE_STYLES[attachedTech] : null;
           const isPickerOpen = techniquePickerFor === i;
-          const hasTech = s.technique !== 'NORMAL';
 
           return (
             <div key={i}>
               <div
                 className={cn(
                   'grid grid-cols-[18px_1fr_60px_60px_22px_26px] gap-1.5 items-center px-1 py-1.5 rounded-lg transition-colors',
-                  s.done ? 'bg-neon-green/10' : (techStyle?.rowBg || 'bg-dark-muted'),
-                  hasTech && techStyle?.rowBorder,
+                  s.done ? 'bg-neon-green/10' : (attachedStyle?.rowBg || 'bg-dark-muted'),
+                  attachedStyle?.rowBorder,
                 )}
               >
                 <span className="text-xs text-slate-500 text-center">{s.setNumber}</span>
                 <div className="min-w-0">
-                  {hasTech && techStyle && (
-                    <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold truncate block w-fit max-w-full', techStyle.badgeClass)}>
-                      {t(techStyle.labelKey)}
+                  {attachedStyle && (
+                    <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold truncate block w-fit max-w-full', attachedStyle.badgeClass)}>
+                      + {t(attachedStyle.labelKey)}
                     </span>
                   )}
                 </div>
@@ -446,10 +500,11 @@ function ExerciseCard({
                 />
                 <button
                   onClick={() => setTechniquePickerFor(isPickerOpen ? null : i)}
+                  title={t('tech.attachTitle')}
                   className={cn(
                     'w-5 h-5 flex items-center justify-center rounded transition-colors',
-                    hasTech && techStyle
-                      ? techStyle.badgeClass
+                    attachedStyle
+                      ? attachedStyle.badgeClass
                       : isPickerOpen
                       ? 'text-neon-yellow bg-neon-yellow/10'
                       : 'text-slate-600 hover:text-neon-yellow',
@@ -470,7 +525,8 @@ function ExerciseCard({
                 </button>
               </div>
 
-              {hasTech && s.technique === 'TEMPO' && !isPickerOpen && (
+              {/* Tempo input for attached TEMPO technique */}
+              {attachedTech === 'TEMPO' && !isPickerOpen && (
                 <div className="flex items-center gap-2 px-1 mt-0.5">
                   <span className="text-[10px] text-neon-yellow shrink-0">{t('tech.tempoLabel')}:</span>
                   <input
@@ -483,13 +539,37 @@ function ExerciseCard({
                 </div>
               )}
 
+              {/* Advanced View: Actual RIR/RPE input after set is done */}
+              {advancedView && s.done && (
+                <div className="flex items-center gap-3 px-1 mt-0.5">
+                  <span className="text-[10px] text-slate-600">RIR:</span>
+                  <input
+                    type="number"
+                    min={0} max={5}
+                    placeholder="—"
+                    value={s.actualRIR ?? ''}
+                    onChange={(e) => onUpdateActualRIR(i, e.target.value === '' ? undefined : parseInt(e.target.value))}
+                    className="w-10 text-center bg-dark-bg border border-dark-border rounded text-[10px] text-neon-purple py-0.5 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-slate-600">RPE:</span>
+                  <input
+                    type="number"
+                    min={6} max={10}
+                    placeholder="—"
+                    value={s.actualRPE ?? ''}
+                    onChange={(e) => onUpdateActualRPE(i, e.target.value === '' ? undefined : parseInt(e.target.value))}
+                    className="w-10 text-center bg-dark-bg border border-dark-border rounded text-[10px] text-neon-pink py-0.5 focus:outline-none"
+                  />
+                </div>
+              )}
+
               {isPickerOpen && (
                 <div className="mt-1 p-2 rounded-lg bg-dark-bg border border-dark-border">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('tech.pickTitle')}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('tech.attachTitle')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {TECHNIQUE_ORDER.map((key) => {
                       const style = TECHNIQUE_STYLES[key];
-                      const isActive = s.technique === key;
+                      const isActive = (s.attachedTechnique ?? 'NORMAL') === key;
                       return (
                         <button
                           key={key}
@@ -507,7 +587,7 @@ function ExerciseCard({
                       );
                     })}
                   </div>
-                  {s.technique === 'TEMPO' && (
+                  {(s.attachedTechnique === 'TEMPO') && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dark-border">
                       <span className="text-[10px] text-neon-yellow shrink-0">{t('tech.tempoLabel')}:</span>
                       <input
