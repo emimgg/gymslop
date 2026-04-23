@@ -250,22 +250,37 @@ export function MealsClient() {
       );
       qc.invalidateQueries({ queryKey: ['meals'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
-      toast.success(t('meals.loggedAllToast'));
+      const names = suItems.map((i) => i.food.isCustom ? i.food.name : t(`food.${i.food.name}` as never)).join(', ');
+      toast.success(`${t('meals.loggedNFoods').replace('{{n}}', String(suItems.length))}: ${names}`);
     } finally {
       setQuickLogging(false);
     }
   }
 
-  function logAgain(suItems: SuggestionItem[], mt: string) {
-    setMealType(mt);
-    setSessionItems(
-      suItems.map((i) => ({
-        food: i.food as unknown as Food,
-        quantity: i.quantity,
-        cookState: i.cookState,
-      }))
-    );
-    setShowAdd(true);
+  async function logAgain(suItems: SuggestionItem[], mt: string) {
+    try {
+      await Promise.all(
+        suItems.map((item) =>
+          fetch('/api/meals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              foodId: item.food.id,
+              quantity: item.quantity,
+              mealType: mt,
+              date: selectedDate,
+              cookState: item.cookState,
+            }),
+          })
+        )
+      );
+      qc.invalidateQueries({ queryKey: ['meals'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      const names = suItems.map((i) => i.food.isCustom ? i.food.name : t(`food.${i.food.name}` as never)).join(', ');
+      toast.success(`${t('meals.loggedNFoods').replace('{{n}}', String(suItems.length))}: ${names}`);
+    } catch {
+      toast.error(t('meals.loggedAllToast'));
+    }
   }
 
   function dismissSuggestion() {

@@ -239,6 +239,7 @@ model Food {
   fat              Float
   fiber            Float    @default(0)
   serving          Float    @default(100)
+  searchTerms      String   @default("") // comma-separated bilingual aliases for search
   // Raw-state macros — null means raw/cooked doesn't apply (NA)
   rawCalories      Float?
   rawProtein       Float?

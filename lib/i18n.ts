@@ -372,6 +372,7 @@ const es = {
   'meals.sessionTitle': 'Agregados',
   'meals.logAll': 'Registrar todo',
   'meals.loggedAllToast': '¡Comidas registradas!',
+  'meals.loggedNFoods': '{{n}} alimentos registrados',
   'meals.alreadyInSession': 'Ya está en la lista',
   'meals.raw': 'Crudo',
   'meals.cooked': 'Cocido',
@@ -1107,7 +1108,8 @@ const en: Record<keyof typeof es, string> = {
   'meals.BREAKFAST': '🌅 Breakfast', 'meals.LUNCH': '☀️ Lunch',
   'meals.DINNER': '🌙 Dinner', 'meals.SNACK': '🍎 Snack',
   'meals.sessionTitle': 'Added', 'meals.logAll': 'Log All',
-  'meals.loggedAllToast': 'Meals logged!', 'meals.alreadyInSession': 'Already in list',
+  'meals.loggedAllToast': 'Meals logged!', 'meals.loggedNFoods': '{{n}} foods logged',
+  'meals.alreadyInSession': 'Already in list',
   'meals.raw': 'Raw', 'meals.cooked': 'Cooked',
   'meals.tabLog': 'Log', 'meals.tabFoods': 'Foods',
   // Smart suggestions

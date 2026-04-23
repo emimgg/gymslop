@@ -12,7 +12,12 @@ export async function GET(req: NextRequest) {
     const foods = await prisma.food.findMany({
       where: {
         AND: [
-          q ? { name: { contains: q, mode: 'insensitive' } } : {},
+          q ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { searchTerms: { contains: q, mode: 'insensitive' } },
+            ],
+          } : {},
           { OR: [{ isCustom: false }, { createdById: userId }] },
         ],
       },

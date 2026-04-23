@@ -40,15 +40,19 @@ export async function POST(req: NextRequest) {
 
     const logDate = date ? new Date(date) : todayUTC();
 
-    // Upsert meal log for the day
-    let mealLog = await prisma.mealLog.findUnique({
+    // Check before upsert so we only award XP on a genuinely new log day
+    const existingLog = await prisma.mealLog.findUnique({
       where: { userId_date: { userId, date: logDate } },
     });
 
-    if (!mealLog) {
-      mealLog = await prisma.mealLog.create({
-        data: { userId, date: logDate },
-      });
+    // Upsert is atomic — safe when concurrent requests log multiple foods at once
+    const mealLog = await prisma.mealLog.upsert({
+      where: { userId_date: { userId, date: logDate } },
+      create: { userId, date: logDate },
+      update: {},
+    });
+
+    if (!existingLog) {
       await awardXp(userId, XP.MEAL_LOG);
     }
 
