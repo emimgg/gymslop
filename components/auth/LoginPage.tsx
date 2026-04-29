@@ -1,10 +1,8 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { Github, UserRound, Zap } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
-
-const IS_DEV = process.env.NODE_ENV === 'development';
 
 export function LoginPage() {
   const { t } = useI18n();
@@ -55,44 +53,6 @@ export function LoginPage() {
             <Github size={18} />
             {t('login.continueGithub')}
           </button>
-
-          <div className="relative my-1">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-dark-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-dark-card px-2 text-xs text-slate-600">o</span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => signIn('guest', { callbackUrl: '/dashboard' })}
-            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-slate-700 bg-transparent text-slate-400 hover:border-slate-500 hover:text-slate-200 transition-all duration-200 text-sm font-medium"
-          >
-            <UserRound size={18} />
-            Entrar como invitado (Prof. Silvia)
-          </button>
-
-          {IS_DEV && (
-            <>
-              <div className="relative my-1">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-yellow-900/50" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-dark-card px-2 text-[10px] text-yellow-700 font-mono uppercase tracking-widest">dev only</span>
-                </div>
-              </div>
-
-              <a
-                href="/api/auth/dev-login"
-                className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-yellow-700/40 bg-yellow-950/20 text-yellow-500 hover:border-yellow-600/60 hover:bg-yellow-950/40 hover:text-yellow-400 transition-all duration-200 text-sm font-medium"
-              >
-                <Zap size={16} />
-                Dev Login — seed user
-              </a>
-            </>
-          )}
 
           <p className="text-center text-xs text-slate-600 mt-4">{t('login.private')}</p>
         </div>
