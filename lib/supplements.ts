@@ -1,38 +1,31 @@
-export type SupplementTiming = 'MORNING' | 'PREWORKOUT' | 'POSTWORKOUT' | 'EVENING' | 'ANYTIME';
-export type SupplementCategory = 'performance' | 'recovery' | 'health';
+export type SupplementTiming = 'MORNING' | 'PREWORKOUT' | 'POSTWORKOUT' | 'EVENING';
 
 export interface Supplement {
   key: string;
-  timing: SupplementTiming;
-  category: SupplementCategory;
   defaultDose: number;
   doseUnit: 'g' | 'mg' | 'IU' | 'mcg';
+  suggestedTiming?: SupplementTiming;
 }
 
 export const SUPPLEMENTS: Supplement[] = [
-  // Morning — health & hormones
-  { key: 'vitamind',    timing: 'MORNING',    category: 'health',       defaultDose: 2000,  doseUnit: 'IU'  },
-  { key: 'omega3',      timing: 'MORNING',    category: 'health',       defaultDose: 1000,  doseUnit: 'mg'  },
-  { key: 'multivitamin',timing: 'MORNING',    category: 'health',       defaultDose: 1,     doseUnit: 'g'   },
-  { key: 'zinc',        timing: 'MORNING',    category: 'health',       defaultDose: 25,    doseUnit: 'mg'  },
-  { key: 'ashwagandha', timing: 'MORNING',    category: 'health',       defaultDose: 600,   doseUnit: 'mg'  },
-
-  // Pre-workout — performance
-  { key: 'caffeine',    timing: 'PREWORKOUT', category: 'performance',  defaultDose: 200,   doseUnit: 'mg'  },
-  { key: 'preworkout_supp', timing: 'PREWORKOUT', category: 'performance', defaultDose: 10, doseUnit: 'g'   },
-  { key: 'citrulline',  timing: 'PREWORKOUT', category: 'performance',  defaultDose: 6000,  doseUnit: 'mg'  },
-  { key: 'betaalanine', timing: 'PREWORKOUT', category: 'performance',  defaultDose: 3200,  doseUnit: 'mg'  },
-  { key: 'eaa',         timing: 'PREWORKOUT', category: 'performance',  defaultDose: 10,    doseUnit: 'g'   },
-  { key: 'bcaa',        timing: 'PREWORKOUT', category: 'performance',  defaultDose: 5,     doseUnit: 'g'   },
-  { key: 'creatine',    timing: 'PREWORKOUT', category: 'performance',  defaultDose: 5,     doseUnit: 'g'   },
-
-  // Post-workout — recovery
-  { key: 'whey',        timing: 'POSTWORKOUT',category: 'recovery',     defaultDose: 30,    doseUnit: 'g'   },
-  { key: 'glutamine',   timing: 'POSTWORKOUT',category: 'recovery',     defaultDose: 5,     doseUnit: 'g'   },
-
-  // Evening — sleep & recovery
-  { key: 'magnesium',   timing: 'EVENING',    category: 'health',       defaultDose: 400,   doseUnit: 'mg'  },
-  { key: 'casein',      timing: 'EVENING',    category: 'recovery',     defaultDose: 30,    doseUnit: 'g'   },
-  { key: 'melatonin',   timing: 'EVENING',    category: 'health',       defaultDose: 3,     doseUnit: 'mg'  },
-  { key: 'collagen',    timing: 'EVENING',    category: 'recovery',     defaultDose: 10,    doseUnit: 'g'   },
+  { key: 'creatine',      defaultDose: 5,     doseUnit: 'g',   suggestedTiming: 'PREWORKOUT' },
+  { key: 'whey',          defaultDose: 30,    doseUnit: 'g',   suggestedTiming: 'POSTWORKOUT' },
+  { key: 'casein',        defaultDose: 30,    doseUnit: 'g',   suggestedTiming: 'EVENING'     },
+  { key: 'preworkout_supp', defaultDose: 10,  doseUnit: 'g',   suggestedTiming: 'PREWORKOUT'  },
+  { key: 'caffeine',      defaultDose: 200,   doseUnit: 'mg',  suggestedTiming: 'PREWORKOUT'  },
+  { key: 'betaalanine',   defaultDose: 3200,  doseUnit: 'mg',  suggestedTiming: 'PREWORKOUT'  },
+  { key: 'citrulline',    defaultDose: 6000,  doseUnit: 'mg',  suggestedTiming: 'PREWORKOUT'  },
+  { key: 'bcaa',          defaultDose: 5,     doseUnit: 'g',   suggestedTiming: 'PREWORKOUT'  },
+  { key: 'eaa',           defaultDose: 10,    doseUnit: 'g',   suggestedTiming: 'PREWORKOUT'  },
+  { key: 'vitamind',      defaultDose: 2000,  doseUnit: 'IU',  suggestedTiming: 'MORNING'     },
+  { key: 'magnesium',     defaultDose: 400,   doseUnit: 'mg',  suggestedTiming: 'EVENING'     },
+  { key: 'zinc',          defaultDose: 25,    doseUnit: 'mg',  suggestedTiming: 'MORNING'     },
+  { key: 'omega3',        defaultDose: 1000,  doseUnit: 'mg',  suggestedTiming: 'MORNING'     },
+  { key: 'multivitamin',  defaultDose: 1,     doseUnit: 'g',   suggestedTiming: 'MORNING'     },
+  { key: 'melatonin',     defaultDose: 3,     doseUnit: 'mg',  suggestedTiming: 'EVENING'     },
+  { key: 'ashwagandha',   defaultDose: 600,   doseUnit: 'mg',  suggestedTiming: 'MORNING'     },
+  { key: 'collagen',      defaultDose: 10,    doseUnit: 'g',   suggestedTiming: 'EVENING'     },
+  { key: 'glutamine',     defaultDose: 5,     doseUnit: 'g',   suggestedTiming: 'POSTWORKOUT' },
 ];
+
+export const SUPPLEMENT_TIMINGS: SupplementTiming[] = ['MORNING', 'PREWORKOUT', 'POSTWORKOUT', 'EVENING'];

@@ -870,6 +870,25 @@ const es = {
   'supp.ashwagandha': 'Ashwagandha',
   'supp.collagen': 'Colágeno',
   'supp.glutamine': 'Glutamina',
+
+  // Supplement bag UI
+  'supp.bag': 'Sin hora asignada',
+  'supp.addSupp': 'Agregar',
+  'supp.addSuppTitle': 'Agregar suplemento',
+  'supp.preloaded': 'Lista predefinida',
+  'supp.custom': 'Personalizado',
+  'supp.customNamePlaceholder': 'ej. Proteína especial',
+  'supp.dose': 'Dosis',
+  'supp.unit': 'Unidad',
+  'supp.checkin': 'Check-in de hoy',
+  'supp.dragHint': 'Arrastrá para asignar hora',
+  'supp.emptySlot': 'Arrastrá aquí',
+  'supp.remove': 'Quitar',
+  'supp.alreadyAdded': 'Ya agregado',
+  'supp.mySupplements': 'Mis suplementos',
+
+  // Progress grouped by muscle
+  'progress.grouped': 'Agrupado por músculo',
 } as const;
 
 const en: Record<keyof typeof es, string> = {
@@ -1623,6 +1642,25 @@ const en: Record<keyof typeof es, string> = {
   'supp.ashwagandha': 'Ashwagandha',
   'supp.collagen': 'Collagen',
   'supp.glutamine': 'Glutamine',
+
+  // Supplement bag UI
+  'supp.bag': 'Unassigned',
+  'supp.addSupp': 'Add',
+  'supp.addSuppTitle': 'Add Supplement',
+  'supp.preloaded': 'Preloaded list',
+  'supp.custom': 'Custom',
+  'supp.customNamePlaceholder': 'e.g. Special protein',
+  'supp.dose': 'Dose',
+  'supp.unit': 'Unit',
+  'supp.checkin': "Today's Check-in",
+  'supp.dragHint': 'Drag to assign a time slot',
+  'supp.emptySlot': 'Drop here',
+  'supp.remove': 'Remove',
+  'supp.alreadyAdded': 'Already added',
+  'supp.mySupplements': 'My Supplements',
+
+  // Progress grouped by muscle
+  'progress.grouped': 'Grouped by muscle',
 };
 
 export const translations: Record<Lang, Record<string, string>> = { es, en };

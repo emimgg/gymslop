@@ -102,6 +102,7 @@ model User {
   accountabilityAs1   AccountabilityPartner[] @relation("AccountabilityUser1")
   accountabilityAs2   AccountabilityPartner[] @relation("AccountabilityUser2")
   supplementLogs      SupplementLog[]
+  userSupplements     UserSupplement[]
 }
 
 // ─── Exercises ───────────────────────────────────────────────────────────────
@@ -504,11 +505,26 @@ model SupplementLog {
   id         String   @id @default(cuid())
   userId     String
   date       DateTime @db.Date
-  supplement String   // supplement key from lib/supplements.ts constants
+  supplement String   // supplement key or custom name
   taken      Boolean  @default(false)
   dose       Float?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date, supplement])
+  @@index([userId])
+}
+
+model UserSupplement {
+  id        String  @id @default(cuid())
+  userId    String
+  name      String  // preloaded key or custom text
+  isCustom  Boolean @default(false)
+  dose      Float?
+  doseUnit  String? // 'g' | 'mg' | 'IU' | 'mcg'
+  timing    String? // 'MORNING' | 'PREWORKOUT' | 'POSTWORKOUT' | 'EVENING' | null (in bag)
+  sortOrder Int     @default(0)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
   @@index([userId])
 }

@@ -10,10 +10,11 @@ export async function GET() {
 
     const [prs, measurements] = await Promise.all([
       // Get all-time PRs per exercise — NORMAL sets only
-      prisma.$queryRaw<{ exerciseId: string; exerciseName: string; weight: number; reps: number; date: Date }[]>`
+      prisma.$queryRaw<{ exerciseId: string; exerciseName: string; muscleGroup: string; weight: number; reps: number; date: Date }[]>`
         SELECT DISTINCT ON (ws."exerciseId")
           ws."exerciseId",
           e.name as "exerciseName",
+          e."muscleGroup" as "muscleGroup",
           ws.weight,
           ws.reps,
           wss."startedAt" as date
