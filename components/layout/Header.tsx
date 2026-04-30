@@ -9,16 +9,9 @@ import { LogOut, User, TrendingUp, Trophy, Users, Settings } from 'lucide-react'
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/components/providers/I18nProvider';
-import { useTheme, type Theme } from '@/components/providers/ThemeProvider';
 import { type Lang } from '@/lib/i18n';
 import { NotificationBell } from '@/components/social/NotificationBell';
 import { cn } from '@/lib/utils';
-
-const themes: { id: Theme; label: string; bg: string; accent: string }[] = [
-  { id: 'minimal', label: 'Minimal', bg: '#18181b', accent: '#4ade80' },
-  { id: 'light',   label: 'Light',   bg: '#f8fafc', accent: '#1677eb' },
-  { id: 'neon',    label: 'Neon',    bg: '#080b12', accent: '#39ff14' },
-];
 
 const langs: { id: Lang; flag: string; label: string }[] = [
   { id: 'es', flag: '🇪🇸', label: 'ES' },
@@ -28,7 +21,6 @@ const langs: { id: Lang; flag: string; label: string }[] = [
 export function Header({ titleKey }: { titleKey: string }) {
   const { data: session } = useSession();
   const { t, lang, setLang } = useI18n();
-  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -113,31 +105,8 @@ export function Header({ titleKey }: { titleKey: string }) {
                     </Link>
                   ))}
                 </div>
-                {/* Theme + language — mobile only */}
+                {/* Language — mobile only */}
                 <div className="lg:hidden border-t border-dark-border mt-1 pt-1">
-                  <p className="px-3 pt-1 pb-1 text-[10px] text-slate-600 uppercase tracking-wider">{t('nav.theme')}</p>
-                  <div className="flex gap-1 px-3 pb-1">
-                    {themes.map((th) => (
-                      <button
-                        key={th.id}
-                        onClick={() => setTheme(th.id)}
-                        className={cn(
-                          'flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-lg border text-[10px] transition-all',
-                          theme === th.id
-                            ? 'border-neon-green/50 bg-neon-green/10 text-neon-green'
-                            : 'border-dark-border text-slate-500 hover:text-slate-300',
-                        )}
-                      >
-                        <span
-                          className="w-6 h-3.5 rounded flex items-center justify-center"
-                          style={{ backgroundColor: th.bg, border: `1px solid ${th.accent}44` }}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: th.accent }} />
-                        </span>
-                        {th.label}
-                      </button>
-                    ))}
-                  </div>
                   <p className="px-3 pt-1 pb-1 text-[10px] text-slate-600 uppercase tracking-wider">{t('nav.language')}</p>
                   <div className="flex gap-1 px-3 pb-2">
                     {langs.map((l) => (

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { useTheme, type Theme } from '@/components/providers/ThemeProvider';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { type Lang } from '@/lib/i18n';
 import {
@@ -30,12 +29,6 @@ const tabKeys = [
 // Mobile bottom bar shows only the core 5 tabs; progress/trophies/social live in the avatar dropdown
 const mobileTabKeys = tabKeys.slice(0, 5);
 
-const themes: { id: Theme; label: string; title: string; bg: string; accent: string }[] = [
-  { id: 'minimal', label: 'Minimal', title: 'Minimal — clean dark (default)', bg: '#18181b', accent: '#4ade80' },
-  { id: 'light',   label: 'Light',   title: 'Light — clean light mode',       bg: '#f8fafc', accent: '#1677eb' },
-  { id: 'neon',    label: 'Neon',    title: 'Neon — cyberpunk glow',          bg: '#080b12', accent: '#39ff14' },
-];
-
 const langs: { id: Lang; flag: string; label: string }[] = [
   { id: 'es', flag: '🇪🇸', label: 'ES' },
   { id: 'en', flag: '🇬🇧', label: 'EN' },
@@ -44,7 +37,6 @@ const langs: { id: Lang; flag: string; label: string }[] = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useI18n();
   const { activeWorkout, minimizeWorkout, clearWorkout } = useWorkoutStore();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -128,40 +120,8 @@ export function Navigation() {
           <span className="flex-1">{t('nav.settings')}</span>
         </Link>
 
-        {/* Theme switcher */}
-        <div className="mt-6 px-3 border-t border-dark-border pt-4">
-          <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2">{t('nav.theme')}</p>
-          <div className="flex gap-1.5">
-            {themes.map((th) => (
-              <button
-                key={th.id}
-                title={th.title}
-                onClick={() => setTheme(th.id)}
-                className={cn(
-                  'flex-1 flex flex-col items-center gap-1 py-1.5 rounded-lg border text-[10px] transition-all duration-200',
-                  theme === th.id
-                    ? 'border-neon-green/50 bg-neon-green/10 text-neon-green'
-                    : 'border-dark-border text-slate-500 hover:border-dark-hover hover:text-slate-300'
-                )}
-              >
-                {/* Hardcoded inline swatch — independent of current theme */}
-                <span
-                  className="w-7 h-4 rounded flex items-center justify-center"
-                  style={{ backgroundColor: th.bg, border: `1px solid ${th.accent}44` }}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: th.accent }}
-                  />
-                </span>
-                <span>{th.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Language switcher */}
-        <div className="mt-3 px-3">
+        <div className="mt-6 px-3 border-t border-dark-border pt-4">
           <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2">{t('nav.language')}</p>
           <div className="flex gap-1.5">
             {langs.map((l) => (
