@@ -11,7 +11,14 @@ import { useI18n } from '@/components/providers/I18nProvider';
 
 interface DashboardData {
   user: { xp: number; level: number; currentStreak: number; longestStreak: number };
-  today: { workout: boolean; meals: boolean; weight: boolean; feels: boolean };
+  today: {
+    workout: boolean;
+    workoutRoutineId: string | null;
+    workoutRoutineName: string | null;
+    meals: boolean;
+    weight: boolean;
+    feels: boolean;
+  };
   recentTrophies: { key: string; name: string; icon: string; unlockedAt: string }[];
   weightTrend: { date: string; weight: number }[];
 }
@@ -44,6 +51,12 @@ export function DashboardClient() {
 
   const doneCount = todayItems.filter((i) => i.done).length;
 
+  const workoutSubtitle = today.workout
+    ? today.workoutRoutineName
+      ? t('dashboard.workoutDone', { name: today.workoutRoutineName })
+      : t('dashboard.workoutFreeDone')
+    : null;
+
   return (
     <div className="space-y-4">
       {/* XP & Level */}
@@ -59,24 +72,32 @@ export function DashboardClient() {
           <span className="text-xs text-slate-500">{t('dashboard.doneFraction', { n: doneCount })}</span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {todayItems.map((item) => (
-            <div
-              key={item.labelKey}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors ${
-                item.done
-                  ? 'bg-neon-green/10 border-neon-green/30'
-                  : 'bg-dark-muted border-dark-border'
-              }`}
-            >
-              <span className="text-xl">{item.emoji}</span>
-              <span className="text-xs text-slate-400">{t(item.labelKey)}</span>
-              {item.done ? (
-                <CheckCircle size={14} className="text-neon-green" />
-              ) : (
-                <Circle size={14} className="text-slate-600" />
-              )}
-            </div>
-          ))}
+          {todayItems.map((item) => {
+            const isWorkout = item.labelKey === 'dashboard.workout';
+            return (
+              <div
+                key={item.labelKey}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors ${
+                  item.done
+                    ? 'bg-neon-green/10 border-neon-green/30'
+                    : 'bg-dark-muted border-dark-border'
+                }`}
+              >
+                <span className="text-xl">{item.emoji}</span>
+                <span className="text-xs text-slate-400">{t(item.labelKey)}</span>
+                {item.done ? (
+                  <>
+                    <CheckCircle size={14} className="text-neon-green" />
+                    {isWorkout && workoutSubtitle && (
+                      <span className="text-[10px] text-neon-green/80 text-center leading-tight font-medium truncate w-full text-center">{workoutSubtitle}</span>
+                    )}
+                  </>
+                ) : (
+                  <Circle size={14} className="text-slate-600" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </Card>
 

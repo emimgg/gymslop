@@ -9,7 +9,8 @@ import { RoutineBuilder } from './RoutineBuilder';
 import { VolumeAnalytics } from './VolumeAnalytics';
 import { useWorkoutStore } from '@/lib/workoutStore';
 import { QuickBuilder } from './QuickBuilder';
-import { Plus, Play, Pencil, Trash2, ChevronLeft, ChevronDown, Zap, Dumbbell, ListChecks, BookOpen } from 'lucide-react';
+import { Plus, Play, Pencil, Trash2, ChevronLeft, ChevronDown, Zap, Dumbbell, ListChecks, BookOpen, History, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { ExerciseDatabase } from './ExerciseDatabase';
 import { cn } from '@/lib/utils';
@@ -278,6 +279,12 @@ export function RoutinesClient() {
     queryFn: () => fetch('/api/routines').then((r) => r.json()),
   });
 
+  const { data: workoutToday } = useQuery<{ completed: boolean; routineId: string | null; routineName: string | null }>({
+    queryKey: ['workoutToday'],
+    queryFn: () => fetch('/api/workouts/today').then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
   const { data: templates } = useQuery<RoutineTemplate[]>({
     queryKey: ['routine-templates'],
     queryFn: () => fetch('/api/routine-templates').then((r) => r.json()),
@@ -457,6 +464,12 @@ export function RoutinesClient() {
       >
         <Dumbbell size={13} /> {t('routines.tabExercises')}
       </button>
+      <Link
+        href="/routines/history"
+        className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all"
+      >
+        <History size={13} /> {t('routines.history')}
+      </Link>
     </div>
   );
 
@@ -506,36 +519,53 @@ export function RoutinesClient() {
         </Card>
       )}
 
+      {/* Free session done banner */}
+      {workoutToday?.completed && !workoutToday.routineId && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neon-green/10 border border-neon-green/30">
+          <CheckCircle2 size={14} className="text-neon-green shrink-0" />
+          <span className="text-sm text-neon-green font-medium">{t('routines.freeSessionDone')}</span>
+        </div>
+      )}
+
       {routines?.map((routine) => {
         const todayDay = routine.days.find((d) => d.dayOfWeek === todayDow);
+        const doneToday = workoutToday?.completed && workoutToday.routineId === routine.id;
         const analyticsDays = routineToAnalyticsDays(routine);
         return (
-          <Card key={routine.id} neon={todayDay ? 'green' : null}>
+          <Card key={routine.id} neon={doneToday ? 'green' : todayDay ? 'green' : null}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h3 className="font-bold text-slate-100 truncate">{routine.name}</h3>
-                  {todayDay && (
+                  {doneToday ? (
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-neon-green/20 text-neon-green border border-neon-green/40 shrink-0 font-semibold" style={{ boxShadow: '0 0 8px rgba(74,222,128,0.3)' }}>
+                      <CheckCircle2 size={9} />
+                      {t('routines.completedToday')}
+                    </span>
+                  ) : todayDay ? (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/15 text-neon-green border border-neon-green/30 shrink-0">
                       {t('common.today')}
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="flex gap-1 flex-wrap mt-2">
                   {[0, 1, 2, 3, 4, 5, 6].map((dow) => {
                     const day = routine.days.find((d) => d.dayOfWeek === dow);
+                    const isTodayDone = doneToday && dow === todayDow;
                     return (
                       <div
                         key={dow}
                         className={`flex flex-col items-center px-2 py-1 rounded text-[10px] border ${
                           day
-                            ? dow === todayDow
+                            ? isTodayDone
+                              ? 'bg-neon-green/25 border-neon-green/60 text-neon-green'
+                              : dow === todayDow
                               ? 'bg-neon-green/15 border-neon-green/40 text-neon-green'
                               : 'bg-dark-muted border-dark-border text-slate-300'
                             : 'border-transparent text-slate-600'
                         }`}
                       >
-                        <span>{t(`day.${dow}`)}</span>
+                        <span>{isTodayDone ? '✓' : t(`day.${dow}`)}</span>
                         {day && <span className="text-slate-500">{day.exercises.length}{t('routines.exSuffix')}</span>}
                       </div>
                     );
@@ -594,9 +624,19 @@ export function RoutinesClient() {
               ))}
             </div>
           ) : (
-            <>
+            <div className="space-y-3">
+              {/* Toggle button always at TOP so it stays visible whether expanded or collapsed */}
+              <button
+                onClick={toggleTemplates}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dark-border text-xs text-slate-500 hover:text-slate-300 hover:border-slate-600 transition-colors"
+              >
+                <BookOpen size={12} />
+                {templatesExpanded ? t('routines.hideTemplates') : t('routines.showTemplates')}
+                <ChevronDown size={12} className={cn('transition-transform', templatesExpanded && 'rotate-180')} />
+              </button>
+
               {templatesExpanded && (
-                <div className="space-y-3 mb-3">
+                <>
                   <div className="flex items-center gap-2">
                     <BookOpen size={14} className="text-neon-purple" />
                     <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
@@ -606,17 +646,9 @@ export function RoutinesClient() {
                   {templates.map((template) => (
                     <TemplateCard key={template.id} template={template} calorieStatus={calorieStatus} onUse={() => useTemplate(template)} />
                   ))}
-                </div>
+                </>
               )}
-              <button
-                onClick={toggleTemplates}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dark-border text-xs text-slate-500 hover:text-slate-300 hover:border-slate-600 transition-colors"
-              >
-                <BookOpen size={12} />
-                {templatesExpanded ? t('routines.hideTemplates') : t('routines.showTemplates')}
-                <ChevronDown size={12} className={cn('transition-transform', templatesExpanded && 'rotate-180')} />
-              </button>
-            </>
+            </div>
           )}
         </div>
       )}

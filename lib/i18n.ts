@@ -258,6 +258,8 @@ const es = {
   'dashboard.bestStreak': 'mejor racha',
   'dashboard.weightTrend': 'Tendencia de peso',
   'dashboard.recentTrophies': 'Trofeos recientes',
+  'dashboard.workoutDone': '{{name}}',
+  'dashboard.workoutFreeDone': 'Sesión libre',
 
   // Weight page
   'weight.current': 'Actual',
@@ -569,6 +571,21 @@ const es = {
   'routines.templates.phat.description': 'Programa de 5 días que fusiona potencia e hipertrofia. Para avanzados que no quieren elegir entre los dos.',
   'routines.templates.gluteFocus.description': 'Cuatro días centrados en el hip thrust y la cadena posterior para maximizar el desarrollo de glúteos.',
   'routines.templates.ulppl.description': 'Cinco días con fuerza en Upper/Lower y volumen en PPL. El salto natural de intermedio a avanzado.',
+  'routines.completedToday': '✓ Completado hoy',
+  'routines.freeSessionDone': '✓ Sesión libre completada',
+  'routines.history': 'Historial',
+
+  // History
+  'history.title': 'Historial',
+  'history.empty': 'Sin entrenamientos aún',
+  'history.emptyDesc': 'Completá un entrenamiento para ver tu historial',
+  'history.freeSession': 'Sesión libre',
+  'history.week': 'Semana del {{date}}',
+  'history.sets': '{{n}} series',
+  'history.volume': '{{n}} kg volumen',
+  'history.duration': '{{n}} min',
+  'history.prs': '{{n}} PR',
+  'history.exercises': '{{n}} ejercicios',
 
   // Quick Builder
   'qb.title': 'Constructor Rápido',
@@ -1032,6 +1049,8 @@ const en: Record<keyof typeof es, string> = {
   'dashboard.meals': 'Meals', 'dashboard.weight': 'Weight', 'dashboard.feels': 'Feels',
   'dashboard.streak': 'day streak', 'dashboard.bestStreak': 'best ever',
   'dashboard.weightTrend': 'Weight Trend', 'dashboard.recentTrophies': 'Recent Trophies',
+  'dashboard.workoutDone': '{{name}}',
+  'dashboard.workoutFreeDone': 'Free session',
 
   'weight.current': 'Current', 'weight.starting': 'Starting',
   'weight.sevenDayAvg': '7-day avg', 'weight.totalChange': 'Total change',
@@ -1295,6 +1314,21 @@ const en: Record<keyof typeof es, string> = {
   'routines.templates.phat.description': 'Power Hypertrophy Adaptive Training — 5-day program blending power and hypertrophy for advanced lifters.',
   'routines.templates.gluteFocus.description': 'Hip-thrust-forward 4-day program designed to maximize glute and posterior chain development.',
   'routines.templates.ulppl.description': '5-day Upper/Lower/Push/Pull/Legs — strength days on Upper & Lower, hypertrophy days on PPL.',
+  'routines.completedToday': '✓ Done today',
+  'routines.freeSessionDone': '✓ Free session done',
+  'routines.history': 'History',
+
+  // History
+  'history.title': 'History',
+  'history.empty': 'No workouts yet',
+  'history.emptyDesc': 'Complete a workout to see your history',
+  'history.freeSession': 'Free session',
+  'history.week': 'Week of {{date}}',
+  'history.sets': '{{n}} sets',
+  'history.volume': '{{n}} kg vol.',
+  'history.duration': '{{n}} min',
+  'history.prs': '{{n}} PR',
+  'history.exercises': '{{n}} exercises',
 
   // Quick Builder
   'qb.title': 'Quick Builder',

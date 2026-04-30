@@ -20,7 +20,7 @@ export async function GET() {
       weightLogs,
     ] = await Promise.all([
       prisma.user.findUnique({ where: { id: userId }, select: { xp: true, level: true, currentStreak: true, longestStreak: true } }),
-      prisma.workoutSession.findFirst({ where: { userId, completedAt: { gte: today } } }),
+      prisma.workoutSession.findFirst({ where: { userId, completedAt: { gte: today } }, select: { id: true, routineId: true } }),
       prisma.mealLog.findFirst({ where: { userId, date: today } }),
       prisma.weightLog.findFirst({ where: { userId, date: today } }),
       prisma.feelsLog.findFirst({ where: { userId, date: today } }),
@@ -38,10 +38,21 @@ export async function GET() {
       }),
     ]);
 
+    let workoutRoutineName: string | null = null;
+    if (workoutToday?.routineId) {
+      const routine = await prisma.routine.findUnique({
+        where: { id: workoutToday.routineId },
+        select: { name: true },
+      });
+      workoutRoutineName = routine?.name ?? null;
+    }
+
     return NextResponse.json({
       user,
       today: {
         workout: !!workoutToday,
+        workoutRoutineId: workoutToday?.routineId ?? null,
+        workoutRoutineName,
         meals: !!mealToday,
         weight: !!weightToday,
         feels: !!feelsToday,

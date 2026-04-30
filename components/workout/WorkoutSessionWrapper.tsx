@@ -89,6 +89,8 @@ export function WorkoutSessionWrapper() {
       onComplete={() => {
         clearWorkout();
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['workoutToday'] });
+        queryClient.invalidateQueries({ queryKey: ['workoutSessions'] });
       }}
       onCancel={() => clearWorkout()}
     />
