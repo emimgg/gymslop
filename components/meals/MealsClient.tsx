@@ -233,25 +233,26 @@ export function MealsClient() {
   async function quickLog(suItems: SuggestionItem[], mt: string) {
     setQuickLogging(true);
     try {
-      await Promise.all(
-        suItems.map((item) =>
-          fetch('/api/meals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              foodId: item.food.id,
-              quantity: item.quantity,
-              mealType: mt,
-              date: selectedDate,
-              cookState: item.cookState,
-            }),
-          })
-        )
-      );
+      const res = await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: suItems.map((item) => ({
+            foodId: item.food.id,
+            quantity: item.quantity,
+            mealType: mt,
+            cookState: item.cookState,
+          })),
+          date: selectedDate,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to log');
       qc.invalidateQueries({ queryKey: ['meals'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       const names = suItems.map((i) => i.food.isCustom ? i.food.name : t(`food.${i.food.name}` as never)).join(', ');
       toast.success(`${t('meals.loggedNFoods').replace('{{n}}', String(suItems.length))}: ${names}`);
+    } catch {
+      toast.error(t('meals.loggedAllToast'));
     } finally {
       setQuickLogging(false);
     }
@@ -259,21 +260,20 @@ export function MealsClient() {
 
   async function logAgain(suItems: SuggestionItem[], mt: string) {
     try {
-      await Promise.all(
-        suItems.map((item) =>
-          fetch('/api/meals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              foodId: item.food.id,
-              quantity: item.quantity,
-              mealType: mt,
-              date: selectedDate,
-              cookState: item.cookState,
-            }),
-          })
-        )
-      );
+      const res = await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: suItems.map((item) => ({
+            foodId: item.food.id,
+            quantity: item.quantity,
+            mealType: mt,
+            cookState: item.cookState,
+          })),
+          date: selectedDate,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to log');
       qc.invalidateQueries({ queryKey: ['meals'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       const names = suItems.map((i) => i.food.isCustom ? i.food.name : t(`food.${i.food.name}` as never)).join(', ');

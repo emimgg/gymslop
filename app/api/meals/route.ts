@@ -32,20 +32,13 @@ export async function POST(req: NextRequest) {
     const session = await requireAuth();
     const userId = session.user.id;
     const body = await req.json();
-    const { foodId, quantity, mealType, date, cookState } = body;
 
-    if (!foodId || !quantity || !mealType) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    }
+    const logDate = body.date ? new Date(body.date) : todayUTC();
 
-    const logDate = date ? new Date(date) : todayUTC();
-
-    // Check before upsert so we only award XP on a genuinely new log day
     const existingLog = await prisma.mealLog.findUnique({
       where: { userId_date: { userId, date: logDate } },
     });
 
-    // Upsert is atomic — safe when concurrent requests log multiple foods at once
     const mealLog = await prisma.mealLog.upsert({
       where: { userId_date: { userId, date: logDate } },
       create: { userId, date: logDate },
@@ -56,6 +49,40 @@ export async function POST(req: NextRequest) {
       await awardXp(userId, XP.MEAL_LOG);
     }
 
+    // Batch mode: body.items is an array of food entries
+    if (Array.isArray(body.items)) {
+      const { items } = body;
+      if (items.length === 0) {
+        return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+      }
+      for (const entry of items) {
+        if (!entry.foodId || !entry.quantity || !entry.mealType) {
+          return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+        }
+      }
+      const created = await prisma.$transaction(
+        items.map((entry: { foodId: string; quantity: number; mealType: string; cookState?: string }) =>
+          prisma.mealLogItem.create({
+            data: {
+              mealLogId: mealLog.id,
+              foodId: entry.foodId,
+              mealType: entry.mealType as MealType,
+              quantity: parseFloat(String(entry.quantity)),
+              cookState: entry.cookState ?? 'RAW',
+            },
+            include: { food: true },
+          })
+        )
+      );
+      await checkTrophies(userId);
+      return NextResponse.json(created, { status: 201 });
+    }
+
+    // Single-item mode (used by the manual log modal)
+    const { foodId, quantity, mealType, cookState } = body;
+    if (!foodId || !quantity || !mealType) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    }
     const item = await prisma.mealLogItem.create({
       data: {
         mealLogId: mealLog.id,
@@ -66,9 +93,7 @@ export async function POST(req: NextRequest) {
       },
       include: { food: true },
     });
-
     await checkTrophies(userId);
-
     return NextResponse.json(item, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

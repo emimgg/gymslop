@@ -25,7 +25,7 @@ import { NeonButton } from '@/components/ui/NeonButton';
 import { NeonInput } from '@/components/ui/NeonInput';
 import { NeonSelect } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Trash2, ChevronLeft, GripVertical, Zap } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, GripVertical, Zap, Check } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
 import toast from 'react-hot-toast';
 import { computeDaySummary } from '@/lib/routineAnalytics';
@@ -313,8 +313,8 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
   }
 
   function openAddExercise() {
-    // Default target days to currently selected day
-    setTargetDays(selectedDay != null ? [selectedDay] : days.map((d) => d.dayOfWeek));
+    // Default to current selected day only; user can then check additional days
+    setTargetDays(selectedDay != null ? [selectedDay] : []);
     setShowAddExercise(true);
   }
 
@@ -579,12 +579,12 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
       {/* Add exercise modal */}
       <Modal open={showAddExercise} onClose={() => { setShowAddExercise(false); setExSearch(''); }} title={t('builder.addExerciseTitle')}>
         <div className="space-y-3">
-          {/* Day selector */}
+          {/* Multi-day selector — each button toggles independently */}
           {days.length > 1 && (
             <div>
               <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('builder.targetDays')}</p>
               <div className="flex flex-wrap gap-1.5">
-                {days.sort((a, b) => a.dayOfWeek - b.dayOfWeek).map((d) => {
+                {[...days].sort((a, b) => a.dayOfWeek - b.dayOfWeek).map((d) => {
                   const checked = targetDays.includes(d.dayOfWeek);
                   return (
                     <button
@@ -595,17 +595,26 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
                           : [...targetDays, d.dayOfWeek]
                       )}
                       className={cn(
-                        'px-2.5 py-1 rounded-lg border text-xs font-medium transition-all',
+                        'flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all',
                         checked
                           ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
-                          : 'border-dark-border text-slate-400 hover:border-slate-500',
+                          : 'border-dark-border text-slate-400 hover:border-slate-500 hover:text-slate-300',
                       )}
                     >
+                      {checked
+                        ? <Check size={10} className="shrink-0" />
+                        : <span className="w-2.5 h-2.5 rounded-sm border border-current opacity-40 shrink-0" />
+                      }
                       {t(`day.${d.dayOfWeek}`)}
                     </button>
                   );
                 })}
               </div>
+              {targetDays.length > 1 && (
+                <p className="text-[10px] text-neon-cyan/70 mt-1">
+                  {t('builder.addedToDays', { days: targetDays.map((d) => t(`day.${d}`)).join(', ') })}
+                </p>
+              )}
             </div>
           )}
           <NeonInput

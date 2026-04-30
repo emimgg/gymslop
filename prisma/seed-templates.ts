@@ -19,15 +19,15 @@ const PUSH_DAY: TEx[] = [
   { name: 'Cable Rope Tricep Extension',      sets: 3, reps: '15' },
 ];
 
+// Deadlift removed (back/posterior chain belongs on Lower/Leg days only)
+// Cable Pullover removed to keep BACK ≤ 24 sets/week on PPL (2× per week)
 const PULL_DAY: TEx[] = [
-  { name: 'Deadlift',                sets: 3, reps: '5'  },
-  { name: 'Pull-Up',                 sets: 4, reps: '8'  },
-  { name: 'Barbell Row',             sets: 4, reps: '6'  },
-  { name: 'Lat Pulldown',            sets: 3, reps: '10' },
-  { name: 'Cable Pullover',          sets: 3, reps: '12' },
-  { name: 'Bayesian Cable Curl',     sets: 3, reps: '10' },
-  { name: 'Incline Dumbbell Curl',   sets: 3, reps: '12' },
-  { name: 'Face Pull',               sets: 3, reps: '15' },
+  { name: 'Pull-Up',               sets: 4, reps: '8'  },
+  { name: 'Barbell Row',           sets: 4, reps: '6'  },
+  { name: 'Lat Pulldown',          sets: 3, reps: '10' },
+  { name: 'Bayesian Cable Curl',   sets: 3, reps: '10' },
+  { name: 'Incline Dumbbell Curl', sets: 3, reps: '12' },
+  { name: 'Face Pull',             sets: 3, reps: '15' },
 ];
 
 const LEGS_DAY: TEx[] = [
@@ -156,7 +156,6 @@ const TEMPLATES: TTemplate[] = [
         { name: 'Cable Rope Tricep Extension', sets: 3, reps: '12' },
       ]},
       { dayOfWeek: 2, label: 'Back', exercises: [
-        { name: 'Deadlift',                  sets: 4, reps: '5'  },
         { name: 'Pull-Up',                   sets: 4, reps: '8'  },
         { name: 'Barbell Row',               sets: 4, reps: '8'  },
         { name: 'Lat Pulldown',              sets: 3, reps: '10' },
@@ -211,11 +210,11 @@ const TEMPLATES: TTemplate[] = [
         { name: 'Incline Dumbbell Curl', sets: 3, reps: '12' },
       ]},
       { dayOfWeek: 2, label: 'Back + Triceps', exercises: [
-        { name: 'Deadlift',                         sets: 4, reps: '5'  },
-        { name: 'Close-Grip Bench Press',           sets: 4, reps: '10' },
         { name: 'Pull-Up',                          sets: 4, reps: '8'  },
-        { name: 'Overhead Cable Tricep Extension',  sets: 3, reps: '12' },
         { name: 'Barbell Row',                      sets: 3, reps: '8'  },
+        { name: 'Cable Pullover',                   sets: 3, reps: '12' },
+        { name: 'Close-Grip Bench Press',           sets: 4, reps: '10' },
+        { name: 'Overhead Cable Tricep Extension',  sets: 3, reps: '12' },
         { name: 'Cable Rope Tricep Extension',      sets: 3, reps: '15' },
       ]},
       { dayOfWeek: 4, label: 'Shoulders + Biceps', exercises: [
