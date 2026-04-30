@@ -11,7 +11,8 @@ import { useI18n } from '@/components/providers/I18nProvider';
 import { cn } from '@/lib/utils';
 import { TECHNIQUE_ORDER, TECHNIQUE_STYLES, type SetTechniqueKey } from '@/lib/techniques';
 import { useWorkoutStore, type WorkoutSetEntry, type WorkoutExercise } from '@/lib/workoutStore';
-import { useAdvancedView } from '@/lib/useAdvancedView';
+import { useAdvancedView, useRestTimerPrefs } from '@/lib/useAdvancedView';
+import { EXERCISE_META } from '@/lib/exerciseMetadata';
 import toast from 'react-hot-toast';
 
 interface Exercise {
@@ -29,6 +30,7 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
   const { t } = useI18n();
   const { activeWorkout, updateWorkoutState, minimizeWorkout, clearWorkout } = useWorkoutStore();
   const advancedView = useAdvancedView();
+  const restTimerPrefs = useRestTimerPrefs();
 
   const [exercises, setExercises] = useState<WorkoutExercise[]>(activeWorkout?.exercises ?? []);
   const [sets, setSets] = useState<Record<string, WorkoutSetEntry[]>>(activeWorkout?.sets ?? {});
@@ -78,7 +80,14 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
       ...prev,
       [exerciseId]: prev[exerciseId].map((s, i) => i === setIdx ? { ...s, done: !s.done } : s),
     }));
-    if (!wasDone) setRestCountdown(90);
+    if (!wasDone) {
+      const ex = exercises.find((e) => e.exerciseId === exerciseId);
+      const meta = ex ? EXERCISE_META[ex.exercise.name] : null;
+      const duration = meta?.movementType === 'Compound'
+        ? restTimerPrefs.compound
+        : restTimerPrefs.isolation;
+      setRestCountdown(duration);
+    }
   }
 
   function updateSet(exerciseId: string, setIdx: number, field: 'reps' | 'weight', value: number) {
@@ -226,9 +235,32 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
               {formatTime(elapsed)}
             </div>
             {restCountdown > 0 && (
-              <div className="flex items-center gap-1 text-neon-yellow text-sm font-mono px-2 py-1 rounded border border-neon-yellow/30 bg-neon-yellow/10">
-                <Flame size={12} />
-                {formatTime(restCountdown)}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setRestCountdown((r) => Math.max(0, r - 15))}
+                  title={t('session.restSub')}
+                  className="text-[11px] text-slate-500 hover:text-neon-yellow transition-colors px-1 py-0.5 rounded"
+                >
+                  {t('session.restSub')}
+                </button>
+                <div className="flex items-center gap-1 text-neon-yellow text-sm font-mono px-2 py-1 rounded border border-neon-yellow/30 bg-neon-yellow/10">
+                  <Flame size={12} />
+                  {formatTime(restCountdown)}
+                </div>
+                <button
+                  onClick={() => setRestCountdown((r) => r + 15)}
+                  title={t('session.restAdd')}
+                  className="text-[11px] text-slate-500 hover:text-neon-yellow transition-colors px-1 py-0.5 rounded"
+                >
+                  {t('session.restAdd')}
+                </button>
+                <button
+                  onClick={() => setRestCountdown(0)}
+                  title={t('session.restSkip')}
+                  className="text-slate-600 hover:text-slate-300 transition-colors p-0.5"
+                >
+                  <X size={12} />
+                </button>
               </div>
             )}
             <button

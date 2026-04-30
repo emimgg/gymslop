@@ -7,6 +7,8 @@ interface UserProfile {
   weeklyGoalKg?: number | null;
   caloricTarget?: number | null;
   name?: string | null;
+  restTimerCompound?: number | null;
+  restTimerIsolation?: number | null;
 }
 
 export function useUserProfile() {
@@ -20,6 +22,14 @@ export function useUserProfile() {
 export function useAdvancedView(): boolean {
   const { data } = useUserProfile();
   return data?.advancedView ?? false;
+}
+
+export function useRestTimerPrefs(): { compound: number; isolation: number } {
+  const { data } = useUserProfile();
+  return {
+    compound: data?.restTimerCompound ?? 180,
+    isolation: data?.restTimerIsolation ?? 90,
+  };
 }
 
 export type CalorieStatus = 'deficit' | 'maintenance' | 'surplus';

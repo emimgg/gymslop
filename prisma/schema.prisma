@@ -76,7 +76,9 @@ model User {
   caloricTarget  Int?       // daily kcal target (computed from TDEE + weekly goal)
 
   // Preferences
-  advancedView   Boolean    @default(false)
+  advancedView        Boolean @default(false)
+  restTimerCompound   Int     @default(180)   // seconds; default 3:00
+  restTimerIsolation  Int     @default(90)    // seconds; default 1:30
 
   accounts       Account[]
   sessions       Session[]

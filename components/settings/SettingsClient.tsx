@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { signOut } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
@@ -33,6 +33,52 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+const REST_TIMER_MIN = 15;
+const REST_TIMER_MAX = 300;
+const REST_TIMER_STEP = 15;
+
+function formatRestTime(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = (secs % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function RestTimerSlider({
+  label,
+  value,
+  onChange,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  onCommit: () => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs text-slate-400">{label}</p>
+        <span className="text-xs font-mono text-neon-cyan tabular-nums">{formatRestTime(value)}</span>
+      </div>
+      <input
+        type="range"
+        min={REST_TIMER_MIN}
+        max={REST_TIMER_MAX}
+        step={REST_TIMER_STEP}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value))}
+        onMouseUp={onCommit}
+        onTouchEnd={onCommit}
+        className="w-full h-1.5 rounded-full appearance-none bg-dark-muted accent-neon-cyan cursor-pointer"
+      />
+      <div className="flex justify-between text-[10px] text-slate-600 mt-0.5">
+        <span>0:15</span>
+        <span>5:00</span>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsClient() {
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -45,8 +91,33 @@ export function SettingsClient() {
   const [savingName, setSavingName] = useState(false);
   const [togglingAdvanced, setTogglingAdvanced] = useState(false);
 
+  const [compoundRest, setCompoundRest] = useState(180);
+  const [isolationRest, setIsolationRest] = useState(90);
+
+  useEffect(() => {
+    if (userProfile) {
+      setCompoundRest(userProfile.restTimerCompound ?? 180);
+      setIsolationRest(userProfile.restTimerIsolation ?? 90);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!userProfile]);
+
   // Sync name from profile once loaded
   const resolvedName = displayName !== '' ? displayName : (userProfile?.name ?? session?.user?.name ?? '');
+
+  async function handleSaveRestTimers() {
+    try {
+      await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restTimerCompound: compoundRest, restTimerIsolation: isolationRest }),
+      });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      toast.success(t('settings.restSaved'));
+    } catch {
+      // silent — next drag will retry
+    }
+  }
 
   async function handleToggleAdvancedView() {
     setTogglingAdvanced(true);
@@ -242,6 +313,25 @@ export function SettingsClient() {
               </ul>
             </div>
           )}
+        </Card>
+      </section>
+
+      {/* ── Entrenamiento ─────────────────────────────────────────────────── */}
+      <section>
+        <SectionHeader title={t('settings.workout')} />
+        <Card className="space-y-5">
+          <RestTimerSlider
+            label={t('settings.restCompound')}
+            value={compoundRest}
+            onChange={setCompoundRest}
+            onCommit={handleSaveRestTimers}
+          />
+          <RestTimerSlider
+            label={t('settings.restIsolation')}
+            value={isolationRest}
+            onChange={setIsolationRest}
+            onCommit={handleSaveRestTimers}
+          />
         </Card>
       </section>
 

@@ -685,6 +685,9 @@ const es = {
   'session.noPrevRecord': 'Sin registro previo',
   'session.thisDayScope': 'este día',
   'session.reps': 'Reps',
+  'session.restSkip': 'Saltar descanso',
+  'session.restAdd': '+15s',
+  'session.restSub': '-15s',
 
   // Progress
   'progress.prWall': 'Récords personales ({{n}})',
@@ -775,6 +778,10 @@ const es = {
   'settings.signOut': 'Cerrar sesión',
   'settings.advancedOff': 'OFF — interfaz simple y limpia',
   'settings.advancedOn': 'ON — herramientas avanzadas habilitadas',
+  'settings.workout': 'Entrenamiento',
+  'settings.restCompound': 'Descanso — ejercicios compuestos',
+  'settings.restIsolation': 'Descanso — ejercicios de aislamiento',
+  'settings.restSaved': 'Tiempos de descanso guardados',
 
   // Calorie-aware volume
   'qb.calorieNote.deficit': 'Volumen ajustado para déficit calórico',
@@ -1385,6 +1392,9 @@ const en: Record<keyof typeof es, string> = {
   'session.lastWorkout': 'Last workout', 'session.noPrevRecord': 'No previous record',
   'session.thisDayScope': 'this day',
   'session.reps': 'Reps',
+  'session.restSkip': 'Skip rest',
+  'session.restAdd': '+15s',
+  'session.restSub': '-15s',
 
   'progress.prWall': 'PR Wall ({{n}})', 'progress.measurements': 'Measurements',
   'progress.noPRs': 'No PRs yet',
@@ -1463,6 +1473,10 @@ const en: Record<keyof typeof es, string> = {
   'settings.signOut': 'Sign out',
   'settings.advancedOff': 'OFF — simple, clean interface',
   'settings.advancedOn': 'ON — advanced tools enabled',
+  'settings.workout': 'Workout',
+  'settings.restCompound': 'Rest — compound exercises',
+  'settings.restIsolation': 'Rest — isolation exercises',
+  'settings.restSaved': 'Rest timers saved',
 
   // Calorie-aware volume
   'qb.calorieNote.deficit': 'Volume adjusted for caloric deficit',

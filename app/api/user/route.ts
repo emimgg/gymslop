@@ -28,6 +28,8 @@ export async function GET() {
         weeklyGoalKg: true,
         caloricTarget: true,
         advancedView: true,
+        restTimerCompound: true,
+        restTimerIsolation: true,
         createdAt: true,
       },
     });
@@ -45,6 +47,7 @@ export async function PATCH(req: NextRequest) {
       goalWeight, startingWeight, heightCm, name, age, sex, activityLevel,
       stepsPerWeek, liftingSessionsPerWeek, avgSessionDurationMin,
       weeklyGoalKg, caloricTarget, advancedView,
+      restTimerCompound, restTimerIsolation,
     } = body;
 
     const user = await prisma.user.update({
@@ -63,6 +66,8 @@ export async function PATCH(req: NextRequest) {
         ...(weeklyGoalKg != null && { weeklyGoalKg: parseFloat(weeklyGoalKg) }),
         ...(caloricTarget != null && { caloricTarget: parseInt(caloricTarget) }),
         ...(advancedView != null && { advancedView: Boolean(advancedView) }),
+        ...(restTimerCompound != null && { restTimerCompound: parseInt(restTimerCompound) }),
+        ...(restTimerIsolation != null && { restTimerIsolation: parseInt(restTimerIsolation) }),
       },
     });
 
