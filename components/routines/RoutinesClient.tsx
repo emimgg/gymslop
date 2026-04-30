@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { MG_CONFIG, COLOR_STYLES } from '@/lib/muscleGroupConfig';
 import { computeDaySummary } from '@/lib/routineAnalytics';
 import type { AnalyticsDay } from '@/lib/routineAnalytics';
-import { useUserProfile, getCalorieStatus, type CalorieStatus } from '@/lib/useAdvancedView';
+import { useUserProfile, useAdvancedView, getCalorieStatus, type CalorieStatus } from '@/lib/useAdvancedView';
 import toast from 'react-hot-toast';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -173,6 +173,7 @@ function TemplateCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const { t } = useI18n();
+  const advancedView = useAdvancedView();
   const badgeClass = DIFFICULTY_STYLES[template.difficulty] ?? DIFFICULTY_STYLES.Intermediate;
   const analyticsDays = templateToAnalyticsDays(template);
   const calorieBadgeKey = getCalorieBadge(template.daysPerWeek, calorieStatus);
@@ -237,7 +238,7 @@ function TemplateCard({
               </div>
             );
           })}
-          <VolumeAnalytics days={analyticsDays} />
+          {advancedView && <VolumeAnalytics days={analyticsDays} />}
         </div>
       )}
 
@@ -292,6 +293,7 @@ export function RoutinesClient() {
   });
 
   const { data: userProfile } = useUserProfile();
+  const advancedView = useAdvancedView();
   const calorieStatus: CalorieStatus = getCalorieStatus(userProfile?.weeklyGoalKg);
 
   const todayDow = new Date().getDay();
@@ -603,7 +605,7 @@ export function RoutinesClient() {
               </div>
             )}
 
-            <VolumeAnalytics days={analyticsDays} />
+            {advancedView && <VolumeAnalytics days={analyticsDays} />}
           </Card>
         );
       })}

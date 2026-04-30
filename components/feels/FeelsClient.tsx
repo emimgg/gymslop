@@ -7,6 +7,7 @@ import { NeonButton } from '@/components/ui/NeonButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn, toDateOnly, todayUTC, formatDateShort } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
+import { SupplementsClient } from './SupplementsClient';
 import toast from 'react-hot-toast';
 
 const METRIC_KEYS = ['sleep', 'performance', 'hunger', 'energy', 'stress', 'mood'] as const;
@@ -24,9 +25,12 @@ interface FeelsLog {
   energy: number; stress: number; mood: number;
 }
 
+type FeelsTab = 'wellness' | 'supplements';
+
 export function FeelsClient() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState<FeelsTab>('wellness');
   const [ratings, setRatings] = useState<Record<string, number>>({
     sleep: 3, performance: 3, hunger: 3, energy: 3, stress: 2, mood: 3,
   });
@@ -58,12 +62,40 @@ export function FeelsClient() {
 
   const insights = computeInsights(logs ?? [], t);
 
-  if (isLoading) return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>;
+  if (isLoading && activeTab === 'wellness') return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>;
 
   const calDays = t('feels.calHeader').split(',');
 
+  const tabBar = (
+    <div className="flex gap-1 bg-dark-card border border-dark-border rounded-xl p-1 mb-4">
+      {(['wellness', 'supplements'] as FeelsTab[]).map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${
+            activeTab === tab
+              ? 'bg-dark-hover text-slate-100 shadow-sm'
+              : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          {tab === 'wellness' ? `💚 ${t('feels.tabWellness')}` : `💊 ${t('feels.tabSupplements')}`}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (activeTab === 'supplements') {
+    return (
+      <div className="space-y-4">
+        {tabBar}
+        <SupplementsClient />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {tabBar}
       {/* Today's check-in */}
       <Card neon={todayLog ? 'green' : 'cyan'}>
         <div className="flex items-center justify-between mb-4">

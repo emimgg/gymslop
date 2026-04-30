@@ -14,6 +14,7 @@ import {
 import { TrendingDown, TrendingUp, Minus, Scale, Settings2, AlertTriangle } from 'lucide-react';
 import { formatDateShort, toDateOnly, todayUTC } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
+import { useAdvancedView } from '@/lib/useAdvancedView';
 import toast from 'react-hot-toast';
 import { WeightWeeklySummary } from './WeightWeeklySummary';
 
@@ -22,6 +23,7 @@ interface WeightLog {
   date: string;
   weight: number;
   note: string | null;
+  weighingTime?: string | null;
 }
 
 interface WeightData {
@@ -110,8 +112,10 @@ function weeklyGoalToDaily(weeklyKg: number): number {
 export function WeightClient() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  const advancedView = useAdvancedView();
   const [weight, setWeight] = useState('');
   const [note, setNote] = useState('');
+  const [weighingTime, setWeighingTime] = useState('');
   const [goalWeight, setGoalWeight] = useState('');
   const [logging, setLogging] = useState(false);
   const [settingGoal, setSettingGoal] = useState(false);
@@ -239,12 +243,13 @@ export function WeightClient() {
       await fetch('/api/weight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weight, note, date: toDateOnly(todayUTC()) }),
+        body: JSON.stringify({ weight, note, date: toDateOnly(todayUTC()), weighingTime: weighingTime || null }),
       });
       qc.invalidateQueries({ queryKey: ['weight'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       setWeight('');
       setNote('');
+      setWeighingTime('');
       toast.success(t('weight.loggedToast'));
     } finally {
       setLogging(false);
@@ -373,8 +378,8 @@ export function WeightClient() {
         </div>
       )}
 
-      {/* TDEE Breakdown card */}
-      {tdeeBreakdown && (
+      {/* TDEE Breakdown card — Advanced View only */}
+      {advancedView && tdeeBreakdown && (
         <Card>
           <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.tdeeBreakdown')}</h2>
           <div className="space-y-2 text-sm">
@@ -435,25 +440,55 @@ export function WeightClient() {
         </button>
       )}
 
+      {/* Weighing time inconsistency warning — Advanced View only */}
+      {advancedView && (() => {
+        const timeLogs = data?.logs.slice(0, 7).filter((l) => l.weighingTime) ?? [];
+        if (timeLogs.length < 3) return null;
+        const hours = timeLogs.map((l) => {
+          const [h, m] = (l.weighingTime as string).split(':').map(Number);
+          return h + m / 60;
+        });
+        const spread = Math.max(...hours) - Math.min(...hours);
+        if (spread <= 2) return null;
+        return (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <span>{t('weight.timeInconsistency')}</span>
+          </div>
+        );
+      })()}
+
       {/* Log weight */}
       <Card neon="cyan">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.logSection')}</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <NeonInput
             placeholder="e.g. 78.5"
             type="number"
             step="0.1"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
-            className="flex-1"
+            className="flex-1 min-w-[80px]"
           />
           <NeonInput
             placeholder={t('weight.notePlaceholder')}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="flex-1"
+            className="flex-1 min-w-[80px]"
           />
-          <NeonButton variant="cyan" loading={logging} onClick={logWeight}>
+          {advancedView && (
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">{t('weight.weighingTime')}</label>
+              <input
+                type="time"
+                value={weighingTime}
+                onChange={(e) => setWeighingTime(e.target.value)}
+                placeholder={t('weight.fastedHint')}
+                className="bg-dark-muted border border-dark-border rounded-lg px-3 py-2 text-sm text-neon-cyan focus:outline-none focus:border-neon-cyan/60 w-32"
+              />
+            </div>
+          )}
+          <NeonButton variant="cyan" loading={logging} onClick={logWeight} className="self-end">
             <Scale size={14} /> {t('weight.logBtn')}
           </NeonButton>
         </div>
@@ -509,8 +544,8 @@ export function WeightClient() {
         </Card>
       )}
 
-      {/* Weekly summary */}
-      <WeightWeeklySummary />
+      {/* Weekly summary — Advanced View only */}
+      {advancedView && <WeightWeeklySummary />}
 
       {/* Recent entries */}
       {data?.logs && data.logs.length > 0 && (

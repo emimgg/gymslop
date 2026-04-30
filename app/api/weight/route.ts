@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const session = await requireAuth();
     const userId = session.user.id;
     const body = await req.json();
-    const { weight, note, date } = body;
+    const { weight, note, date, weighingTime } = body;
 
     if (!weight) return NextResponse.json({ error: 'Weight required' }, { status: 400 });
 
@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
 
     const log = await prisma.weightLog.upsert({
       where: { userId_date: { userId, date: logDate } },
-      update: { weight: parseFloat(weight), note: note ?? null },
-      create: { userId, date: logDate, weight: parseFloat(weight), note: note ?? null },
+      update: { weight: parseFloat(weight), note: note ?? null, weighingTime: weighingTime ?? null },
+      create: { userId, date: logDate, weight: parseFloat(weight), note: note ?? null, weighingTime: weighingTime ?? null },
     });
 
     // Set starting weight if not set

@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import { cn, sumMacros, effectiveMacros, toDateOnly, todayUTC } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
+import { useAdvancedView } from '@/lib/useAdvancedView';
 import { FoodDatabase } from '@/components/meals/FoodDatabase';
 import {
   type FoodCatKey,
@@ -94,6 +95,7 @@ function FoodPickerRow({
 export function MealsClient() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  const advancedView = useAdvancedView();
   const [mainTab, setMainTab] = useState<MainTab>('registro');
   const [selectedDate] = useState(toDateOnly(todayUTC()));
   const [showAdd, setShowAdd] = useState(false);
@@ -431,7 +433,11 @@ export function MealsClient() {
                       <div className="flex items-center gap-1.5">
                         <p className="text-slate-200 truncate">{foodDisplayName(item.food)}</p>
                       </div>
-                      <p className="text-xs text-slate-500">{item.quantity}g · {Math.round(cal)} kcal · {Math.round(prot)}g {t('meals.protein').toLowerCase()}</p>
+                      {advancedView ? (
+                          <p className="text-xs text-slate-500">{item.quantity}g · {Math.round(cal)} kcal · {Math.round(prot)}g {t('meals.protein').toLowerCase()}</p>
+                        ) : (
+                          <p className="text-xs text-slate-500">{item.quantity}g · {Math.round(cal)} kcal</p>
+                        )}
                     </div>
                     <button onClick={() => deleteItem(item.id)} className="text-slate-600 hover:text-red-400 transition-colors ml-2 p-1">
                       <Trash2 size={12} />

@@ -829,6 +829,47 @@ const es = {
   // Technique attachments
   'tech.attachTitle': 'Técnica adjunta',
   'tech.noAttachment': 'Sin técnica adjunta',
+
+  // Weight — weighing time
+  'weight.weighingTime': 'Hora de pesaje',
+  'weight.fastedHint': 'ej. 07:30, en ayunas',
+  'weight.timeInconsistency': 'Las horas de pesaje varían >2h esta semana — puede afectar la precisión',
+
+  // Feels tabs
+  'feels.tabWellness': 'Bienestar',
+  'feels.tabSupplements': 'Suplementos',
+
+  // Supplements
+  'supp.title': 'Suplementos de hoy',
+  'supp.morning': 'Mañana',
+  'supp.preworkout': 'Pre-entreno',
+  'supp.postworkout': 'Post-entreno',
+  'supp.evening': 'Noche',
+  'supp.anytime': 'En cualquier momento',
+  'supp.streak': '{{n}} días',
+  'supp.corrDays': 'Con ({{n}} días)',
+  'supp.corrWithout': 'Sin ({{n}} días)',
+  'supp.noCorrelation': 'Datos insuficientes',
+  'supp.perfLabel': 'Rendimiento promedio',
+  // Supplement names
+  'supp.creatine': 'Creatina',
+  'supp.whey': 'Proteína Whey',
+  'supp.casein': 'Caseína',
+  'supp.preworkout_supp': 'Pre-Entreno',
+  'supp.caffeine': 'Cafeína',
+  'supp.betaalanine': 'Beta-Alanina',
+  'supp.citrulline': 'Citrulina Malato',
+  'supp.bcaa': 'BCAA',
+  'supp.eaa': 'EAA',
+  'supp.vitamind': 'Vitamina D',
+  'supp.magnesium': 'Magnesio',
+  'supp.zinc': 'Zinc',
+  'supp.omega3': 'Omega-3',
+  'supp.multivitamin': 'Multivitamínico',
+  'supp.melatonin': 'Melatonina',
+  'supp.ashwagandha': 'Ashwagandha',
+  'supp.collagen': 'Colágeno',
+  'supp.glutamine': 'Glutamina',
 } as const;
 
 const en: Record<keyof typeof es, string> = {
@@ -1541,6 +1582,47 @@ const en: Record<keyof typeof es, string> = {
   // Technique attachments
   'tech.attachTitle': 'Attached technique',
   'tech.noAttachment': 'No attached technique',
+
+  // Weight — weighing time
+  'weight.weighingTime': 'Weighing time',
+  'weight.fastedHint': 'e.g. 07:30, fasted',
+  'weight.timeInconsistency': 'Weighing times vary >2h this week — may affect tracking accuracy',
+
+  // Feels tabs
+  'feels.tabWellness': 'Wellness',
+  'feels.tabSupplements': 'Supplements',
+
+  // Supplements
+  'supp.title': "Today's Supplements",
+  'supp.morning': 'Morning',
+  'supp.preworkout': 'Pre-Workout',
+  'supp.postworkout': 'Post-Workout',
+  'supp.evening': 'Evening',
+  'supp.anytime': 'Anytime',
+  'supp.streak': '{{n}} days',
+  'supp.corrDays': 'With ({{n}} days)',
+  'supp.corrWithout': 'Without ({{n}} days)',
+  'supp.noCorrelation': 'Not enough data',
+  'supp.perfLabel': 'Avg performance',
+  // Supplement names
+  'supp.creatine': 'Creatine',
+  'supp.whey': 'Whey Protein',
+  'supp.casein': 'Casein Protein',
+  'supp.preworkout_supp': 'Pre-Workout',
+  'supp.caffeine': 'Caffeine',
+  'supp.betaalanine': 'Beta-Alanine',
+  'supp.citrulline': 'Citrulline Malate',
+  'supp.bcaa': 'BCAAs',
+  'supp.eaa': 'EAAs',
+  'supp.vitamind': 'Vitamin D',
+  'supp.magnesium': 'Magnesium',
+  'supp.zinc': 'Zinc',
+  'supp.omega3': 'Omega-3',
+  'supp.multivitamin': 'Multivitamin',
+  'supp.melatonin': 'Melatonin',
+  'supp.ashwagandha': 'Ashwagandha',
+  'supp.collagen': 'Collagen',
+  'supp.glutamine': 'Glutamine',
 };
 
 export const translations: Record<Lang, Record<string, string>> = { es, en };
