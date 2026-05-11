@@ -100,6 +100,31 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await requireAuth();
+    const userId = session.user.id;
+    const { searchParams } = new URL(req.url);
+    const itemId = searchParams.get('itemId');
+    if (!itemId) return NextResponse.json({ error: 'itemId required' }, { status: 400 });
+
+    const { quantity } = await req.json();
+    if (!quantity || isNaN(parseFloat(quantity))) return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 });
+
+    const item = await prisma.mealLogItem.findFirst({ where: { id: itemId, mealLog: { userId } } });
+    if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const updated = await prisma.mealLogItem.update({
+      where: { id: itemId },
+      data: { quantity: parseFloat(String(quantity)) },
+      include: { food: true },
+    });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const session = await requireAuth();

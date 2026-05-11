@@ -477,6 +477,13 @@ const es = {
   'meals.dismiss': 'Ignorar hoy',
   'meals.recentMeals': 'Últimas comidas',
   'meals.logAgain': 'Volver a registrar',
+  'meals.step1Title': 'Buscar alimentos',
+  'meals.step2Title': 'Revisar y confirmar',
+  'meals.continueToReview': 'Continuar →',
+  'meals.backToSearch': 'Volver a buscar',
+  'meals.filter': 'Filtrar',
+  'meals.editQty': 'Editar cantidad',
+  'meals.runningTotal': 'Total seleccionado',
 
   // Food database browser
   'fooddb.searchPlaceholder': 'Buscar alimentos…',
@@ -1295,6 +1302,13 @@ const en: Record<keyof typeof es, string> = {
   'meals.dismiss': 'Dismiss',
   'meals.recentMeals': 'Recent meals',
   'meals.logAgain': 'Log Again',
+  'meals.step1Title': 'Search Foods',
+  'meals.step2Title': 'Review & Confirm',
+  'meals.continueToReview': 'Continue →',
+  'meals.backToSearch': 'Back to search',
+  'meals.filter': 'Filter',
+  'meals.editQty': 'Edit quantity',
+  'meals.runningTotal': 'Selected total',
 
   // Food database browser
   'fooddb.searchPlaceholder': 'Search foods…',

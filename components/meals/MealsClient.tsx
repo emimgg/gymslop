@@ -9,7 +9,7 @@ import { NeonSelect } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { MacroBar } from '@/components/ui/MacroBar';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Check, Plus, Trash2, X } from 'lucide-react';
+import { Check, Plus, Trash2, X, Pencil, ChevronLeft, Filter } from 'lucide-react';
 import { cn, sumMacros, effectiveMacros, toDateOnly, todayUTC } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { useAdvancedView } from '@/lib/useAdvancedView';
@@ -65,28 +65,34 @@ function computeGoals(caloricTarget: number | null, bodyweightKg: number | null)
   return { calories, protein, fat, carbs };
 }
 
-// ── Food picker row (used in both grouped and flat views) ──────────────────
+// ── Step-1 food picker row ─────────────────────────────────────────────────
 
 function FoodPickerRow({
-  food, catKey, added, onAdd, displayName,
+  food, catKey, added, onAdd, onRemove, displayName,
 }: {
-  food: Food; catKey: FoodCatKey; added: boolean; onAdd: () => void; displayName: string;
+  food: Food; catKey: FoodCatKey; added: boolean;
+  onAdd: () => void; onRemove: () => void; displayName: string;
 }) {
   const styles = CAT_STYLES[catKey];
   return (
-    <button
-      onClick={added ? undefined : onAdd}
-      disabled={added}
-      className={cn(
-        'w-full text-left flex items-center gap-2.5 px-3 py-2 transition-colors text-sm',
-        added ? 'opacity-40 cursor-default' : 'hover:bg-dark-hover cursor-pointer',
-      )}
-    >
+    <div className="flex items-center gap-2.5 px-3 py-2.5">
       <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', styles.dot)} />
-      <span className={cn('flex-1 truncate', added ? 'text-slate-400' : 'text-slate-200')}>{displayName}</span>
-      <span className="text-[11px] text-slate-500 shrink-0">{food.calories} kcal · {food.protein}g P</span>
-      {added && <Check size={12} className="text-neon-green shrink-0" />}
-    </button>
+      <span className={cn('flex-1 text-sm truncate', added ? 'text-slate-400' : 'text-slate-200')}>
+        {displayName}
+      </span>
+      <span className="text-[11px] text-slate-500 shrink-0">{food.calories} kcal</span>
+      <button
+        onClick={added ? onRemove : onAdd}
+        className={cn(
+          'w-7 h-7 flex items-center justify-center rounded-full border transition-all shrink-0',
+          added
+            ? 'bg-neon-green/15 border-neon-green/40 text-neon-green'
+            : 'border-dark-border text-slate-500 hover:border-neon-cyan/40 hover:text-neon-cyan',
+        )}
+      >
+        {added ? <Check size={12} /> : <Plus size={12} />}
+      </button>
+    </div>
   );
 }
 
@@ -110,7 +116,16 @@ export function MealsClient() {
   const [dismissedDate, setDismissedDate] = useState<string>(() =>
     typeof window !== 'undefined' ? (localStorage.getItem('meal-sugg-dismissed') ?? '') : ''
   );
+  // 2-step modal state
+  const [modalStep, setModalStep] = useState<1 | 2>(1);
+  const [filterCat, setFilterCat] = useState<FoodCatKey | null>(null);
+  const [showCatFilter, setShowCatFilter] = useState(false);
+  // Inline edit state
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingQty, setEditingQty] = useState('');
+
   const searchRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const inferredMealType = getMealTypeFromTime();
 
@@ -132,7 +147,6 @@ export function MealsClient() {
   const currentWeight = weightData?.logs?.[0]?.weight ?? null;
   const GOALS = computeGoals(userProfile?.caloricTarget ?? null, currentWeight);
 
-  // Fetch all foods at once; shared cache key with FoodDatabase tab.
   const { data: allFoods } = useQuery<Food[]>({
     queryKey: ['foods-all'],
     queryFn: () => fetch('/api/foods?all=true').then((r) => r.json()),
@@ -148,20 +162,25 @@ export function MealsClient() {
     staleTime: 5 * 60_000,
   });
 
-  // Client-side search filter for the modal
-  const modalFiltered = useMemo(() => {
+  // Step 1 filtered list: applies text search and/or category filter
+  const step1Filtered = useMemo(() => {
     const all = allFoods ?? [];
     const q = foodSearch.toLowerCase().trim();
-    if (!q) return all;
     return all.filter((f) => {
-      const name = f.isCustom ? f.name : f.name.toLowerCase();
-      return name.includes(q);
+      if (filterCat && getCategoryForFood(f) !== filterCat) return false;
+      if (q) {
+        const name = f.isCustom ? f.name.toLowerCase() : f.name.toLowerCase();
+        const translated = foodDisplayName(f).toLowerCase();
+        if (!name.includes(q) && !translated.includes(q)) return false;
+      }
+      return true;
     });
-  }, [allFoods, foodSearch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allFoods, foodSearch, filterCat]);
 
-  // Grouped view (only when not searching)
-  const modalGrouped = useMemo((): [FoodCatKey, Food[]][] | null => {
-    if (foodSearch.trim()) return null;
+  // Grouped view (only when no search and no category filter active)
+  const step1Grouped = useMemo((): [FoodCatKey, Food[]][] | null => {
+    if (foodSearch.trim() || filterCat) return null;
     const map: Partial<Record<FoodCatKey, Food[]>> = {};
     for (const food of allFoods ?? []) {
       const cat = getCategoryForFood(food);
@@ -172,7 +191,15 @@ export function MealsClient() {
       if (map[cat]) map[cat]!.sort((a, b) => a.name.localeCompare(b.name));
     }
     return CATEGORY_ORDER.filter((cat) => map[cat]?.length).map((cat) => [cat, map[cat]!]);
-  }, [allFoods, foodSearch]);
+  }, [allFoods, foodSearch, filterCat]);
+
+  // Running totals for step 2 staging list
+  const stagingTotals = useMemo(() => sumMacros(
+    sessionItems.map((item) => {
+      const m = effectiveMacros(item.food, item.cookState);
+      return { quantity: item.quantity, food: { ...item.food, ...m } };
+    })
+  ), [sessionItems]);
 
   const items = mealLog?.items ?? [];
   const totals = sumMacros(items.map((item) => {
@@ -192,8 +219,6 @@ export function MealsClient() {
     const quantity = overrideQty ?? food.serving;
     const cookState = overrideCookState ?? food.defaultCookState ?? 'RAW';
     setSessionItems((prev) => [...prev, { food, quantity, cookState }]);
-    setFoodSearch('');
-    setTimeout(() => searchRef.current?.focus(), 0);
   }
 
   function addSuggestionFoodToSession(sf: SuggestionFood, qty: number, cookState: string) {
@@ -223,9 +248,7 @@ export function MealsClient() {
       );
       qc.invalidateQueries({ queryKey: ['meals'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
-      setShowAdd(false);
-      setSessionItems([]);
-      setFoodSearch('');
+      closeModal();
       toast.success(t('meals.loggedAllToast'));
     } finally {
       setLoggingAll(false);
@@ -240,10 +263,7 @@ export function MealsClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: suItems.map((item) => ({
-            foodId: item.food.id,
-            quantity: item.quantity,
-            mealType: mt,
-            cookState: item.cookState,
+            foodId: item.food.id, quantity: item.quantity, mealType: mt, cookState: item.cookState,
           })),
           date: selectedDate,
         }),
@@ -267,10 +287,7 @@ export function MealsClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: suItems.map((item) => ({
-            foodId: item.food.id,
-            quantity: item.quantity,
-            mealType: mt,
-            cookState: item.cookState,
+            foodId: item.food.id, quantity: item.quantity, mealType: mt, cookState: item.cookState,
           })),
           date: selectedDate,
         }),
@@ -285,6 +302,25 @@ export function MealsClient() {
     }
   }
 
+  async function saveEditQty(itemId: string) {
+    const qty = parseFloat(editingQty);
+    if (!qty || qty <= 0) { setEditingItemId(null); return; }
+    await fetch(`/api/meals?itemId=${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: qty }),
+    });
+    qc.invalidateQueries({ queryKey: ['meals'] });
+    qc.invalidateQueries({ queryKey: ['dashboard'] });
+    setEditingItemId(null);
+  }
+
+  function startEdit(item: MealItem) {
+    setEditingItemId(item.id);
+    setEditingQty(String(item.quantity));
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  }
+
   function dismissSuggestion() {
     localStorage.setItem('meal-sugg-dismissed', selectedDate);
     setDismissedDate(selectedDate);
@@ -292,14 +328,20 @@ export function MealsClient() {
 
   function openModal() {
     setShowAdd(true);
+    setModalStep(1);
     setSessionItems([]);
     setFoodSearch('');
+    setFilterCat(null);
+    setShowCatFilter(false);
   }
 
   function closeModal() {
     setShowAdd(false);
+    setModalStep(1);
     setSessionItems([]);
     setFoodSearch('');
+    setFilterCat(null);
+    setShowCatFilter(false);
   }
 
   function handleAddFoodFromBrowser(food: Food) {
@@ -309,6 +351,7 @@ export function MealsClient() {
       return [{ food, quantity: food.serving, cookState: food.defaultCookState ?? 'RAW' }];
     });
     setFoodSearch('');
+    setModalStep(2);
     setShowAdd(true);
   }
 
@@ -328,9 +371,10 @@ export function MealsClient() {
       });
       const food = await res.json();
       setShowCustomFood(false);
-      setShowAdd(true);
       setCustomFood({ name: '', brand: '', calories: '', protein: '', carbs: '', fat: '', fiber: '', serving: '100' });
       addToSession(food);
+      setShowAdd(true);
+      setModalStep(2);
       toast.success(t('meals.foodCreatedToast'));
     } finally {
       setCreatingFood(false);
@@ -399,11 +443,10 @@ export function MealsClient() {
         if (!sugg || dismissedDate === selectedDate) return null;
         const alreadyLogged = grouped[sugg.mealType as typeof MEAL_TYPES[number]]?.length > 0;
         if (alreadyLogged) return null;
-        const mealTypeName = t(`meals.${sugg.mealType}` as never);
         return (
           <MealSuggestionCard
             suggestion={sugg}
-            mealTypeName={mealTypeName}
+            mealTypeName={t(`meals.${sugg.mealType}` as never)}
             onQuickLog={() => quickLog(sugg.items, sugg.mealType)}
             onDismiss={dismissSuggestion}
             loading={quickLogging}
@@ -427,21 +470,59 @@ export function MealsClient() {
                 const m = effectiveMacros(item.food, item.cookState);
                 const cal = (m.calories * item.quantity) / item.food.serving;
                 const prot = (m.protein * item.quantity) / item.food.serving;
+                const isEditing = editingItemId === item.id;
                 return (
                   <div key={item.id} className="flex items-center justify-between p-2 rounded-lg bg-dark-muted text-sm">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-slate-200 truncate">{foodDisplayName(item.food)}</p>
-                      </div>
-                      {advancedView ? (
-                          <p className="text-xs text-slate-500">{item.quantity}g · {Math.round(cal)} kcal · {Math.round(prot)}g {t('meals.protein').toLowerCase()}</p>
+                      <p className="text-slate-200 truncate">{foodDisplayName(item.food)}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {isEditing ? (
+                          <>
+                            <input
+                              ref={editInputRef}
+                              type="number"
+                              inputMode="decimal"
+                              value={editingQty}
+                              onChange={(e) => setEditingQty(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEditQty(item.id);
+                                if (e.key === 'Escape') setEditingItemId(null);
+                              }}
+                              className="w-16 h-7 text-center bg-dark-bg border border-neon-cyan/40 rounded text-xs text-neon-cyan focus:outline-none"
+                            />
+                            <span className="text-[10px] text-slate-500">g</span>
+                            <button onClick={() => saveEditQty(item.id)} className="text-neon-green hover:opacity-80 p-0.5">
+                              <Check size={13} />
+                            </button>
+                            <button onClick={() => setEditingItemId(null)} className="text-slate-500 hover:text-slate-300 p-0.5">
+                              <X size={11} />
+                            </button>
+                          </>
                         ) : (
-                          <p className="text-xs text-slate-500">{item.quantity}g · {Math.round(cal)} kcal</p>
+                          <>
+                            <span className="text-xs text-slate-500">{item.quantity}g</span>
+                            <button
+                              onClick={() => startEdit(item)}
+                              title={t('meals.editQty')}
+                              className="text-slate-600 hover:text-neon-cyan transition-colors p-0.5"
+                            >
+                              <Pencil size={10} />
+                            </button>
+                            <span className="text-xs text-slate-600">·</span>
+                            {advancedView ? (
+                              <span className="text-xs text-slate-500">{Math.round(cal)} kcal · {Math.round(prot)}g P</span>
+                            ) : (
+                              <span className="text-xs text-slate-500">{Math.round(cal)} kcal</span>
+                            )}
+                          </>
                         )}
+                      </div>
                     </div>
-                    <button onClick={() => deleteItem(item.id)} className="text-slate-600 hover:text-red-400 transition-colors ml-2 p-1">
-                      <Trash2 size={12} />
-                    </button>
+                    {!isEditing && (
+                      <button onClick={() => deleteItem(item.id)} className="text-slate-600 hover:text-red-400 transition-colors ml-2 p-1 shrink-0">
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -458,45 +539,88 @@ export function MealsClient() {
       )}
 
       {suggestions?.recentMeals && suggestions.recentMeals.length > 0 && (
-        <RecentMealsSection
-          meals={suggestions.recentMeals}
-          onLogAgain={logAgain}
-        />
+        <RecentMealsSection meals={suggestions.recentMeals} onLogAgain={logAgain} />
       )}
 
-      {/* Add food modal */}
-      <Modal open={showAdd} onClose={closeModal} title={t('meals.logFoodTitle')}>
-        <div className="space-y-3">
-          <p className="text-[11px] text-slate-500 text-center px-2 py-1.5 rounded-lg bg-dark-muted border border-dark-border/40">
-            {t('fooddb.rawNote')}
-          </p>
-
-          <NeonSelect label={t('meals.meal')} value={mealType} onChange={(e) => setMealType(e.target.value)}>
-            {MEAL_TYPES.map((mt) => <option key={mt} value={mt}>{t(`meals.${mt}`)}</option>)}
-          </NeonSelect>
-
-          <NeonInput
-            ref={searchRef}
-            label={t('meals.searchFood')}
-            placeholder={t('meals.searchPlaceholder')}
-            value={foodSearch}
-            onChange={(e) => setFoodSearch(e.target.value)}
-            autoFocus
-          />
-
-          {/* Frequent foods (shown when search is empty and data loaded) */}
-          {!foodSearch.trim() && suggestions?.frequentFoods && suggestions.frequentFoods.length > 0 && (
-            <FrequentFoodsSection
-              foods={suggestions.frequentFoods}
-              sessionFoodIds={sessionItems.map((i) => i.food.id)}
-              onAdd={addSuggestionFoodToSession}
+      {/* ── Log food modal — 2-step ────────────────────────────────────────── */}
+      <Modal
+        open={showAdd}
+        onClose={closeModal}
+        title={modalStep === 1 ? t('meals.step1Title') : t('meals.step2Title')}
+      >
+        {/* ── Step 1: Search & Select ─────────────────────────── */}
+        {modalStep === 1 && (
+          <div className="space-y-3">
+            {/* Search */}
+            <NeonInput
+              ref={searchRef}
+              placeholder={t('meals.searchPlaceholder')}
+              value={foodSearch}
+              onChange={(e) => setFoodSearch(e.target.value)}
+              autoFocus
             />
-          )}
 
-          {/* Grouped food browser (no search active) */}
-          {!foodSearch.trim() && modalGrouped && (
-            <div className="max-h-72 overflow-y-auto rounded-lg border border-dark-border">
-              {modalGrouped.map(([cat, catFoods]) => {
+            {/* Filter chip row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setShowCatFilter((v) => !v)}
+                className={cn(
+                  'flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border transition-all',
+                  showCatFilter || filterCat
+                    ? 'bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan'
+                    : 'border-dark-border text-slate-500 hover:border-slate-400 hover:text-slate-300',
+                )}
+              >
+                <Filter size={10} /> {t('meals.filter')}
+              </button>
+              {filterCat && (
+                <button
+                  onClick={() => setFilterCat(null)}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan"
+                >
+                  {CATEGORY_EMOJI[filterCat]} {t(`foodcat.${filterCat}`)}
+                  <X size={10} />
+                </button>
+              )}
+            </div>
+
+            {showCatFilter && (
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORY_ORDER.map((cat) => {
+                  const count = (allFoods ?? []).filter((f) => getCategoryForFood(f) === cat).length;
+                  if (!count) return null;
+                  const styles = CAT_STYLES[cat];
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => { setFilterCat(filterCat === cat ? null : cat); setShowCatFilter(false); }}
+                      className={cn(
+                        'text-xs px-2.5 py-1 rounded-full border transition-all',
+                        filterCat === cat
+                          ? cn(styles.badge, 'ring-1 ring-current')
+                          : 'border-dark-border text-slate-400 hover:border-slate-400',
+                      )}
+                    >
+                      {CATEGORY_EMOJI[cat]} {t(`foodcat.${cat}`)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Frequent foods (no search, no filter) */}
+            {!foodSearch.trim() && !filterCat && suggestions?.frequentFoods && suggestions.frequentFoods.length > 0 && (
+              <FrequentFoodsSection
+                foods={suggestions.frequentFoods}
+                sessionFoodIds={sessionItems.map((i) => i.food.id)}
+                onAdd={addSuggestionFoodToSession}
+              />
+            )}
+
+            {/* Food list */}
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-dark-border">
+              {/* Grouped browse */}
+              {step1Grouped && step1Grouped.map(([cat, catFoods]) => {
                 const styles = CAT_STYLES[cat];
                 return (
                   <div key={cat}>
@@ -517,6 +641,7 @@ export function MealsClient() {
                           catKey={cat}
                           added={sessionItems.some((i) => i.food.id === f.id)}
                           onAdd={() => addToSession(f)}
+                          onRemove={() => removeFromSession(f.id)}
                           displayName={foodDisplayName(f)}
                         />
                       ))}
@@ -524,70 +649,122 @@ export function MealsClient() {
                   </div>
                 );
               })}
-            </div>
-          )}
 
-          {/* Flat search results */}
-          {foodSearch.trim() && (
-            <div className="max-h-72 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border/30">
-              {modalFiltered.length === 0 ? (
-                <p className="text-slate-500 text-sm text-center py-6">{t('meals.noResults')}</p>
-              ) : (
-                [...modalFiltered]
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((f) => (
-                    <FoodPickerRow
-                      key={f.id}
-                      food={f}
-                      catKey={getCategoryForFood(f)}
-                      added={sessionItems.some((i) => i.food.id === f.id)}
-                      onAdd={() => addToSession(f)}
-                      displayName={foodDisplayName(f)}
-                    />
-                  ))
+              {/* Flat list (search or category filter active) */}
+              {!step1Grouped && (
+                step1Filtered.length === 0 ? (
+                  <p className="text-slate-500 text-sm text-center py-6">{t('meals.noResults')}</p>
+                ) : (
+                  <div className="divide-y divide-dark-border/30">
+                    {[...step1Filtered]
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((f) => (
+                        <FoodPickerRow
+                          key={f.id}
+                          food={f}
+                          catKey={getCategoryForFood(f)}
+                          added={sessionItems.some((i) => i.food.id === f.id)}
+                          onAdd={() => addToSession(f)}
+                          onRemove={() => removeFromSession(f.id)}
+                          displayName={foodDisplayName(f)}
+                        />
+                      ))}
+                  </div>
+                )
               )}
             </div>
-          )}
 
-          <div className="border-t border-dark-border pt-3">
-            <NeonButton variant="cyan" size="sm" onClick={() => { setShowAdd(false); setShowCustomFood(true); }}>
+            {/* Bottom bar */}
+            <div className="border-t border-dark-border pt-3">
+              {sessionItems.length > 0 ? (
+                <NeonButton variant="green" onClick={() => setModalStep(2)} className="w-full">
+                  {sessionItems.length} {sessionItems.length === 1 ? t('meals.sessionTitle') : t('meals.sessionTitle')} · {t('meals.continueToReview')}
+                </NeonButton>
+              ) : (
+                <NeonButton variant="ghost" size="sm" onClick={() => { setShowAdd(false); setShowCustomFood(true); }}>
+                  <Plus size={12} /> {t('meals.createCustom')}
+                </NeonButton>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 2: Review & Confirm ────────────────────────── */}
+        {modalStep === 2 && (
+          <div className="space-y-4">
+            {/* Back button */}
+            <button
+              onClick={() => setModalStep(1)}
+              className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200 transition-colors -mt-1"
+            >
+              <ChevronLeft size={16} /> {t('meals.backToSearch')}
+            </button>
+
+            {/* Meal type selector */}
+            <NeonSelect label={t('meals.meal')} value={mealType} onChange={(e) => setMealType(e.target.value)}>
+              {MEAL_TYPES.map((mt) => <option key={mt} value={mt}>{t(`meals.${mt}`)}</option>)}
+            </NeonSelect>
+
+            {/* Staged items with qty inputs */}
+            <div className="space-y-2">
+              {sessionItems.map((item) => {
+                const m = effectiveMacros(item.food, item.cookState);
+                const cal = Math.round((m.calories * item.quantity) / item.food.serving);
+                return (
+                  <div key={item.food.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-dark-muted border border-dark-border">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-200 truncate">{foodDisplayName(item.food)}</p>
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={item.quantity}
+                      min={1}
+                      onChange={(e) => updateSessionQuantity(item.food.id, parseFloat(e.target.value) || 0)}
+                      className="w-16 h-9 text-center bg-dark-bg border border-dark-border rounded-lg text-sm text-neon-cyan focus:outline-none focus:border-neon-cyan/50 shrink-0"
+                    />
+                    <span className="text-[10px] text-slate-500 shrink-0 w-12 text-right">{cal} kcal</span>
+                    <button onClick={() => removeFromSession(item.food.id)} className="text-slate-600 hover:text-red-400 transition-colors shrink-0 p-1">
+                      <X size={13} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Running totals */}
+            <div className="flex items-center justify-around p-3 rounded-xl bg-dark-muted border border-dark-border/60 text-sm">
+              <div className="text-center">
+                <p className="font-bold text-neon-cyan">{Math.round(stagingTotals.calories)}</p>
+                <p className="text-[10px] text-slate-500">kcal</p>
+              </div>
+              <div className="w-px h-6 bg-dark-border" />
+              <div className="text-center">
+                <p className="font-bold text-neon-green">{Math.round(stagingTotals.protein)}g</p>
+                <p className="text-[10px] text-slate-500">P</p>
+              </div>
+              <div className="w-px h-6 bg-dark-border" />
+              <div className="text-center">
+                <p className="font-bold text-neon-yellow">{Math.round(stagingTotals.carbs)}g</p>
+                <p className="text-[10px] text-slate-500">C</p>
+              </div>
+              <div className="w-px h-6 bg-dark-border" />
+              <div className="text-center">
+                <p className="font-bold text-neon-pink">{Math.round(stagingTotals.fat)}g</p>
+                <p className="text-[10px] text-slate-500">F</p>
+              </div>
+            </div>
+
+            {/* Log button */}
+            <NeonButton variant="green" loading={loggingAll} onClick={logAll} className="w-full">
+              {t('meals.logAll')} ({sessionItems.length})
+            </NeonButton>
+
+            <NeonButton variant="ghost" size="sm" onClick={() => { setShowAdd(false); setShowCustomFood(true); }}>
               <Plus size={12} /> {t('meals.createCustom')}
             </NeonButton>
           </div>
-
-          {/* Session items */}
-          {sessionItems.length > 0 && (
-            <div className="border-t border-dark-border pt-3 space-y-2">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">{t('meals.sessionTitle')} ({sessionItems.length})</p>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {sessionItems.map((item) => {
-                  const cal = ((item.food.calories * item.quantity) / item.food.serving).toFixed(0);
-                  return (
-                    <div key={item.food.id} className="flex items-center gap-2 p-2 rounded-lg bg-dark-muted border border-dark-border">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-200 truncate">{foodDisplayName(item.food)}</p>
-                      </div>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        min={1}
-                        onChange={(e) => updateSessionQuantity(item.food.id, parseFloat(e.target.value) || 0)}
-                        className="w-16 text-center bg-dark-bg border border-dark-border rounded text-xs text-neon-cyan py-1 shrink-0"
-                      />
-                      <span className="text-[10px] text-slate-500 shrink-0 w-14 text-right">{cal} kcal</span>
-                      <button onClick={() => removeFromSession(item.food.id)} className="text-slate-600 hover:text-red-400 transition-colors shrink-0">
-                        <X size={12} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-              <NeonButton variant="green" loading={loggingAll} onClick={logAll} className="w-full">
-                {t('meals.logAll')} ({sessionItems.length})
-              </NeonButton>
-            </div>
-          )}
-        </div>
+        )}
       </Modal>
 
       {/* Custom food modal */}
