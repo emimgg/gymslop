@@ -7,7 +7,7 @@ import { NeonButton } from '@/components/ui/NeonButton';
 import { NeonInput } from '@/components/ui/NeonInput';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Trophy, Plus, Ruler, Zap, ChevronDown } from 'lucide-react';
+import { Trophy, Plus, Ruler, Zap, ChevronDown, TrendingUp } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ import { MG_CONFIG, COLOR_STYLES } from '@/lib/muscleGroupConfig';
 import toast from 'react-hot-toast';
 
 interface PR { exerciseId: string; exerciseName: string; muscleGroup: string; weight: number; reps: number; date: string; }
+interface PRLog { id: string; exerciseName: string; muscleGroup: string; weight: number; reps: number; date: string; }
 interface Measurement {
   id: string; date: string;
   neck: number | null; chest: number | null; waist: number | null; hips: number | null;
@@ -29,7 +30,7 @@ export function ProgressClient() {
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'prs' | 'measurements' | 'techniques'>('prs');
+  const [activeTab, setActiveTab] = useState<'prs' | 'prlog' | 'measurements' | 'techniques'>('prs');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const measurementFields = [
@@ -52,6 +53,13 @@ export function ProgressClient() {
     queryKey: ['weekly-techniques'],
     queryFn: () => fetch('/api/workouts/techniques').then((r) => r.json()),
     enabled: activeTab === 'techniques',
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: prLog } = useQuery<PRLog[]>({
+    queryKey: ['pr-log'],
+    queryFn: () => fetch('/api/progress/pr-log').then((r) => r.json()),
+    enabled: activeTab === 'prlog',
     staleTime: 5 * 60_000,
   });
 
@@ -112,6 +120,9 @@ export function ProgressClient() {
       <div className="flex gap-2 flex-wrap">
         <NeonButton variant={activeTab === 'prs' ? 'yellow' : 'ghost'} size="sm" onClick={() => setActiveTab('prs')}>
           <Trophy size={12} /> {t('progress.prWall', { n: prs.length })}
+        </NeonButton>
+        <NeonButton variant={activeTab === 'prlog' ? 'green' : 'ghost'} size="sm" onClick={() => setActiveTab('prlog')}>
+          <TrendingUp size={12} /> {t('progress.prLog')}
         </NeonButton>
         <NeonButton variant={activeTab === 'measurements' ? 'cyan' : 'ghost'} size="sm" onClick={() => setActiveTab('measurements')}>
           <Ruler size={12} /> {t('progress.measurements')}
@@ -175,6 +186,39 @@ export function ProgressClient() {
             </div>
           )}
         </>
+      )}
+
+      {activeTab === 'prlog' && (
+        <div className="space-y-2">
+          <p className="text-xs text-slate-500">{t('progress.prLogDesc')}</p>
+          {!prLog || prLog.length === 0 ? (
+            <Card className="text-center py-10">
+              <p className="text-3xl mb-2">📈</p>
+              <p className="text-slate-400 text-sm">{t('progress.prLogEmpty')}</p>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {prLog.map((pr) => {
+                const cfg = MG_CONFIG[pr.muscleGroup];
+                const styles = cfg ? COLOR_STYLES[cfg.color] : null;
+                return (
+                  <div key={pr.id} className={cn('flex items-center gap-3 p-3 rounded-xl border', styles?.border ?? 'border-dark-border', 'bg-dark-card')}>
+                    <div className={cn('w-2 h-2 rounded-full shrink-0', styles?.dot ?? 'bg-slate-600')} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-200 truncate">{t('ex.' + pr.exerciseName)}</p>
+                      <p className="text-[10px] text-slate-500">{formatDate(pr.date)}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-black text-neon-yellow">{pr.weight}<span className="text-xs font-normal text-slate-400">kg</span></p>
+                      <p className="text-[10px] text-slate-500">× {pr.reps} {t('progress.reps')}</p>
+                    </div>
+                    <span className="text-neon-yellow text-sm">🏆</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'measurements' && (

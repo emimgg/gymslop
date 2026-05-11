@@ -29,6 +29,7 @@ interface RoutineExercise {
   setTechniques?: string[];
   targetRIR?: number | null;
   targetRPE?: number | null;
+  isUnilateral?: boolean;
   exercise: Exercise;
 }
 interface RoutineDay { id: string; dayOfWeek: number; exercises: RoutineExercise[]; }
@@ -46,7 +47,7 @@ interface RoutineTemplate {
 
 type EditDraft = {
   id?: string; name: string;
-  days: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight: number | null; exercise: Exercise }[] }[];
+  days: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight: number | null; targetRIR?: number | null; targetRPE?: number | null; isUnilateral?: boolean; setTechniques?: string[]; exercise: Exercise }[] }[];
 };
 
 const TEMPLATE_SLUG: Record<string, string> = {
@@ -95,6 +96,7 @@ function computeInitialExercises(exercises: RoutineExercise[]) {
     setTechniques: re.setTechniques,
     targetRIR: re.targetRIR ?? undefined,
     targetRPE: re.targetRPE ?? undefined,
+    isUnilateral: re.isUnilateral ?? false,
     exercise: re.exercise,
   }));
 }

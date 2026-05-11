@@ -8,6 +8,7 @@ export interface WorkoutSetEntry {
   done: boolean;
   technique: string;
   attachedTechnique?: string; // intensity technique modifier attached to this set
+  side?: 'LEFT' | 'RIGHT' | null;
   tempo: string;
   targetRIR?: number;
   targetRPE?: number;
@@ -23,6 +24,7 @@ export interface WorkoutExercise {
   setTechniques?: string[];
   targetRIR?: number;
   targetRPE?: number;
+  isUnilateral?: boolean;
   exercise: { id: string; name: string; muscleGroup: string };
 }
 

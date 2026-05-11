@@ -115,6 +115,13 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
     }));
   }
 
+  function updateSide(exerciseId: string, setIdx: number, side: 'LEFT' | 'RIGHT' | null) {
+    setSets((prev) => ({
+      ...prev,
+      [exerciseId]: prev[exerciseId].map((s, i) => i === setIdx ? { ...s, side } : s),
+    }));
+  }
+
   function updateActualRPE(exerciseId: string, setIdx: number, val: number | undefined) {
     setSets((prev) => ({
       ...prev,
@@ -179,6 +186,7 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
             isWarmup: false,
             technique: 'NORMAL',
             attachedTechnique: s.attachedTechnique ?? null,
+            side: s.side ?? null,
             tempo: s.tempo || null,
             targetRIR: s.targetRIR ?? null,
             targetRPE: s.targetRPE ?? null,
@@ -288,6 +296,7 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
               exercise={re.exercise}
               targetRIR={re.targetRIR}
               targetRPE={re.targetRPE}
+              isUnilateral={re.isUnilateral}
               sets={sets[re.exerciseId] ?? []}
               advancedView={advancedView}
               onToggle={(i) => toggleSet(re.exerciseId, i)}
@@ -298,6 +307,7 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
               onUpdateTempo={(i, tempo) => updateTempo(re.exerciseId, i, tempo)}
               onUpdateActualRIR={(i, val) => updateActualRIR(re.exerciseId, i, val)}
               onUpdateActualRPE={(i, val) => updateActualRPE(re.exerciseId, i, val)}
+              onUpdateSide={(i, side) => updateSide(re.exerciseId, i, side)}
             />
           ))}
         </div>
@@ -393,15 +403,16 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
 // ── ExerciseCard ────────────────────────────────────────────────────────────
 
 function ExerciseCard({
-  exercise, sets, targetRIR, targetRPE, advancedView,
+  exercise, sets, targetRIR, targetRPE, advancedView, isUnilateral,
   onToggle, onUpdate, onAddSet, onRemoveSet, onUpdateTechnique, onUpdateTempo,
-  onUpdateActualRIR, onUpdateActualRPE,
+  onUpdateActualRIR, onUpdateActualRPE, onUpdateSide,
 }: {
   exercise: { id: string; name: string; muscleGroup: string };
   sets: WorkoutSetEntry[];
   targetRIR?: number | null;
   targetRPE?: number | null;
   advancedView: boolean;
+  isUnilateral?: boolean;
   onToggle: (i: number) => void;
   onUpdate: (i: number, field: 'reps' | 'weight', value: number) => void;
   onAddSet: () => void;
@@ -410,6 +421,7 @@ function ExerciseCard({
   onUpdateTempo: (i: number, tempo: string) => void;
   onUpdateActualRIR: (i: number, val: number | undefined) => void;
   onUpdateActualRPE: (i: number, val: number | undefined) => void;
+  onUpdateSide: (i: number, side: 'LEFT' | 'RIGHT' | null) => void;
 }) {
   const { t } = useI18n();
   const [techniquePickerFor, setTechniquePickerFor] = useState<number | null>(null);
@@ -431,7 +443,14 @@ function ExerciseCard({
     <Card neon={doneSets === sets.length && sets.length > 0 ? 'green' : null}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
+            {isUnilateral && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan font-semibold">
+                {t('unilateral.badge')}
+              </span>
+            )}
+          </div>
           {advancedView && (targetRIR != null || targetRPE != null) && (
             <p className="text-[10px] text-neon-purple mt-0.5">
               {targetRIR != null && t('rir.target', { n: targetRIR })}
@@ -440,6 +459,7 @@ function ExerciseCard({
             </p>
           )}
         </div>
+
         {history?.pr && (
           <span className="flex items-center gap-1 text-xs text-neon-yellow shrink-0">
             <Trophy size={10} />
@@ -568,6 +588,31 @@ function ExerciseCard({
                     onChange={(e) => onUpdateTempo(i, e.target.value)}
                     className="flex-1 text-xs bg-dark-bg border border-neon-yellow/30 rounded px-2 py-0.5 text-neon-yellow focus:outline-none focus:border-neon-yellow/60 font-mono"
                   />
+                </div>
+              )}
+
+              {/* Unilateral side selector */}
+              {isUnilateral && (
+                <div className="flex items-center gap-1.5 px-1 mt-0.5">
+                  <span className="text-[10px] text-slate-500 shrink-0">{t('unilateral.sideLabel')}:</span>
+                  {(['LEFT', 'RIGHT', null] as const).map((side) => (
+                    <button
+                      key={String(side)}
+                      onClick={() => onUpdateSide(i, side)}
+                      className={cn(
+                        'text-[10px] px-2 py-0.5 rounded border transition-all',
+                        s.side === side
+                          ? side === 'LEFT'
+                            ? 'border-neon-cyan/60 bg-neon-cyan/15 text-neon-cyan'
+                            : side === 'RIGHT'
+                            ? 'border-neon-green/60 bg-neon-green/15 text-neon-green'
+                            : 'border-slate-500 bg-dark-muted text-slate-300'
+                          : 'border-dark-border text-slate-600 hover:border-slate-500 hover:text-slate-400',
+                      )}
+                    >
+                      {side === 'LEFT' ? t('unilateral.left') : side === 'RIGHT' ? t('unilateral.right') : t('unilateral.both')}
+                    </button>
+                  ))}
                 </div>
               )}
 

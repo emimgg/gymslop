@@ -25,7 +25,7 @@ import { NeonButton } from '@/components/ui/NeonButton';
 import { NeonInput } from '@/components/ui/NeonInput';
 import { NeonSelect } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
-import { Plus, Trash2, ChevronLeft, GripVertical, Zap, Check } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, GripVertical, Zap, Check, ArrowLeftRight, GitCompare } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
 import toast from 'react-hot-toast';
 import { computeDaySummary } from '@/lib/routineAnalytics';
@@ -43,6 +43,7 @@ interface ExerciseRow {
   setTechniques: SetTechniqueKey[];
   targetRIR?: number | null;
   targetRPE?: number | null;
+  isUnilateral: boolean;
 }
 
 interface DayPlan {
@@ -61,7 +62,7 @@ interface RoutineBuilderProps {
   initial?: {
     id?: string;
     name: string;
-    days: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight: number | null; setTechniques?: string[]; exercise: Exercise }[] }[];
+    days: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight: number | null; setTechniques?: string[]; targetRIR?: number | null; targetRPE?: number | null; isUnilateral?: boolean; exercise: Exercise }[] }[];
   };
   onSaved: () => void;
   onCancel: () => void;
@@ -100,7 +101,7 @@ function SortableExerciseRow({
   id: string; ex: ExerciseRow; dow: number; idx: number;
   t: (k: string) => string;
   advancedView: boolean;
-  onUpdate: (dow: number, idx: number, field: keyof ExerciseRow, val: string | number | null) => void;
+  onUpdate: (dow: number, idx: number, field: keyof ExerciseRow, val: string | number | boolean | null) => void;
   onUpdateTechniques: (dow: number, idx: number, techniques: SetTechniqueKey[]) => void;
   onRemove: (dow: number, idx: number) => void;
 }) {
@@ -125,7 +126,14 @@ function SortableExerciseRow({
         >
           <GripVertical size={14} />
         </button>
-        <span className="flex-1 text-sm text-slate-200 min-w-0 truncate">{t('ex.' + ex.exerciseName)}</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="text-sm text-slate-200 min-w-0 truncate">{t('ex.' + ex.exerciseName)}</span>
+          {ex.isUnilateral && (
+            <span className="shrink-0 text-[9px] px-1 py-0.5 rounded border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan font-semibold">
+              {t('unilateral.badge')}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -136,6 +144,16 @@ function SortableExerciseRow({
             title={t('builder.sets')}
           />
           <span className="text-xs text-slate-500">{t('builder.sets')}</span>
+          <button
+            onClick={() => onUpdate(dow, idx, 'isUnilateral', !ex.isUnilateral)}
+            title={t('unilateral.toggle')}
+            className={cn(
+              'transition-colors',
+              ex.isUnilateral ? 'text-neon-cyan' : 'text-slate-600 hover:text-neon-cyan',
+            )}
+          >
+            <ArrowLeftRight size={12} />
+          </button>
           <button
             onClick={() => setTechPickerFor(techPickerFor != null ? null : 0)}
             className={cn(
@@ -256,6 +274,9 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
         setTechniques: e.setTechniques?.length
           ? (e.setTechniques as SetTechniqueKey[])
           : Array(e.targetSets).fill('NORMAL') as SetTechniqueKey[],
+        targetRIR: e.targetRIR,
+        targetRPE: e.targetRPE,
+        isUnilateral: e.isUnilateral ?? false,
       })),
     })) ?? []
   );
@@ -263,6 +284,9 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showCustomExercise, setShowCustomExercise] = useState(false);
+  const [showCompareDays, setShowCompareDays] = useState(false);
+  const [compareDayA, setCompareDayA] = useState<number | null>(null);
+  const [compareDayB, setCompareDayB] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [exSearch, setExSearch] = useState('');
   const [customEx, setCustomEx] = useState({ name: '', muscleGroup: 'CHEST', equipment: 'BARBELL' });
@@ -328,7 +352,7 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
               ...d,
               exercises: [
                 ...d.exercises,
-                { exerciseId: exercise.id, exerciseName: exercise.name, muscleGroup: exercise.muscleGroup, targetSets: 3, targetReps: 10, targetWeight: null, setTechniques: Array(3).fill('NORMAL') as SetTechniqueKey[] },
+                { exerciseId: exercise.id, exerciseName: exercise.name, muscleGroup: exercise.muscleGroup, targetSets: 3, targetReps: 10, targetWeight: null, setTechniques: Array(3).fill('NORMAL') as SetTechniqueKey[], isUnilateral: false },
               ],
             }
           : d
@@ -361,7 +385,7 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
     );
   }
 
-  function updateExercise(dow: number, idx: number, field: keyof ExerciseRow, value: string | number | null) {
+  function updateExercise(dow: number, idx: number, field: keyof ExerciseRow, value: string | number | boolean | null) {
     setDays(
       days.map((d) =>
         d.dayOfWeek === dow
@@ -430,6 +454,7 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
             setTechniques: e.setTechniques,
             targetRIR: e.targetRIR ?? null,
             targetRPE: e.targetRPE ?? null,
+            isUnilateral: e.isUnilateral ?? false,
           })),
         })),
       };
@@ -568,6 +593,13 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
         </Card>
       )}
 
+      {/* Compare days button (only when 2+ days exist) */}
+      {days.length >= 2 && (
+        <NeonButton variant="ghost" size="sm" onClick={() => { setCompareDayA(null); setCompareDayB(null); setShowCompareDays(true); }}>
+          <GitCompare size={12} /> {t('compare.btn')}
+        </NeonButton>
+      )}
+
       {/* Save button */}
       <div className="flex gap-2">
         <NeonButton variant="ghost" onClick={onCancel}>{t('builder.cancel')}</NeonButton>
@@ -704,6 +736,110 @@ export function RoutineBuilder({ initial, onSaved, onCancel }: RoutineBuilderPro
           </NeonButton>
         </div>
       </Modal>
+
+      {/* Compare days modal */}
+      <Modal open={showCompareDays} onClose={() => setShowCompareDays(false)} title={t('compare.title')}>
+        <CompareDaysPanel days={days} t={t} />
+      </Modal>
+    </div>
+  );
+}
+
+// ── CompareDaysPanel ───────────────────────────────────────────────────────
+
+function CompareDaysPanel({ days, t }: { days: DayPlan[]; t: (k: string) => string }) {
+  const [dayA, setDayA] = useState<number | null>(null);
+  const [dayB, setDayB] = useState<number | null>(null);
+  const sorted = [...days].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+
+  const planA = dayA != null ? days.find((d) => d.dayOfWeek === dayA) ?? null : null;
+  const planB = dayB != null ? days.find((d) => d.dayOfWeek === dayB) ?? null : null;
+
+  function DayColumn({ plan, label }: { plan: DayPlan | null; label: string }) {
+    if (!plan) return (
+      <div className="flex-1 min-w-0 p-3 rounded-xl border border-dashed border-dark-border flex items-center justify-center text-slate-600 text-xs">
+        {t('compare.noDay')}
+      </div>
+    );
+    const summary = computeDaySummary(plan.exercises.map((e) => ({ muscleGroup: e.muscleGroup, sets: e.targetSets })));
+    return (
+      <div className="flex-1 min-w-0 p-3 rounded-xl border border-dark-border bg-dark-card space-y-2">
+        <p className="text-xs font-semibold text-slate-200 border-b border-dark-border pb-1.5">
+          {label}: {t(`dayFull.${plan.dayOfWeek}`)}
+        </p>
+        <div className="flex gap-3 text-xs text-slate-400">
+          <span>{summary.totalSets} {t('compare.totalSets').toLowerCase()}</span>
+          <span>~{summary.estDurationMin} min</span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {summary.muscles.map((mg) => {
+            const cfg = MG_CONFIG[mg];
+            const styles = cfg ? COLOR_STYLES[cfg.color] : null;
+            return (
+              <span key={mg} className={cn('text-[9px] px-1.5 py-0.5 rounded-full border', styles?.badge ?? 'border-dark-border text-slate-500')}>
+                {t(cfg?.labelKey ?? 'muscle.' + mg)}
+              </span>
+            );
+          })}
+        </div>
+        <div className="space-y-0.5 mt-1">
+          {plan.exercises.map((ex, i) => {
+            const cfg = MG_CONFIG[ex.muscleGroup];
+            const styles = cfg ? COLOR_STYLES[cfg.color] : null;
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', styles?.dot ?? 'bg-slate-600')} />
+                <span className="truncate text-slate-300">{t('ex.' + ex.exerciseName)}</span>
+                <span className="shrink-0 text-slate-500 ml-auto">{ex.targetSets}×{ex.targetReps}</span>
+                {ex.isUnilateral && <span className="shrink-0 text-[9px] text-neon-cyan">1×</span>}
+              </div>
+            );
+          })}
+          {plan.exercises.length === 0 && <p className="text-slate-600 text-xs italic">{t('builder.noExercisesYet')}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{t('compare.selectDay1')}</p>
+          <select
+            value={dayA ?? ''}
+            onChange={(e) => setDayA(e.target.value === '' ? null : parseInt(e.target.value))}
+            className="w-full bg-dark-bg border border-dark-border rounded-lg text-sm text-slate-200 px-2 py-1.5 focus:outline-none focus:border-neon-cyan/50"
+          >
+            <option value="">{t('compare.noDay')}</option>
+            {sorted.map((d) => (
+              <option key={d.dayOfWeek} value={d.dayOfWeek} disabled={d.dayOfWeek === dayB}>
+                {t(`dayFull.${d.dayOfWeek}`)} ({d.exercises.length})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{t('compare.selectDay2')}</p>
+          <select
+            value={dayB ?? ''}
+            onChange={(e) => setDayB(e.target.value === '' ? null : parseInt(e.target.value))}
+            className="w-full bg-dark-bg border border-dark-border rounded-lg text-sm text-slate-200 px-2 py-1.5 focus:outline-none focus:border-neon-cyan/50"
+          >
+            <option value="">{t('compare.noDay')}</option>
+            {sorted.map((d) => (
+              <option key={d.dayOfWeek} value={d.dayOfWeek} disabled={d.dayOfWeek === dayA}>
+                {t(`dayFull.${d.dayOfWeek}`)} ({d.exercises.length})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <DayColumn plan={planA} label={t('compare.selectDay1')} />
+        <DayColumn plan={planB} label={t('compare.selectDay2')} />
+      </div>
     </div>
   );
 }

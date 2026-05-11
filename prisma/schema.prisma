@@ -186,6 +186,7 @@ model RoutineExercise {
   setTechniques String[] @default([])
   targetRIR     Int?     // Reps In Reserve target (0-5)
   targetRPE     Int?     // Rate of Perceived Exertion target (6-10)
+  isUnilateral  Boolean  @default(false)
   routineDay    RoutineDay @relation(fields: [routineDayId], references: [id], onDelete: Cascade)
   exercise      Exercise   @relation(fields: [exerciseId], references: [id])
 
@@ -218,6 +219,7 @@ model WorkoutSet {
   isPR              Boolean        @default(false)
   technique         String         @default("NORMAL")
   attachedTechnique String?        // intensity technique attached to this normal set
+  side              String?        // 'LEFT' | 'RIGHT' | null — for unilateral exercises
   tempo             String?
   targetRIR         Int?           // planned Reps In Reserve
   targetRPE         Int?           // planned Rate of Perceived Exertion

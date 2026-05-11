@@ -38,26 +38,27 @@ export async function POST(req: NextRequest) {
     const { routineId, sets } = body;
     // sets: [{ exerciseId, setNumber, reps, weight, isWarmup, technique?, attachedTechnique?, tempo?, targetRIR?, targetRPE?, actualRIR?, actualRPE? }]
 
-    // PR check only on NORMAL sets — technique attachments are ignored for PR detection
+    // PR check only on NORMAL non-warmup sets with actual weight
     const setsWithPr = await Promise.all(
       (sets ?? []).map(async (s: {
         exerciseId: string; setNumber: number; reps: number; weight: number;
         isWarmup: boolean; technique?: string; attachedTechnique?: string | null;
-        tempo?: string | null; targetRIR?: number | null; targetRPE?: number | null;
+        side?: string | null; tempo?: string | null; targetRIR?: number | null; targetRPE?: number | null;
         actualRIR?: number | null; actualRPE?: number | null;
       }) => {
         const technique = 'NORMAL'; // always NORMAL — technique attachments live in attachedTechnique
         let isPR = false;
-        if (true) {
+        if (!s.isWarmup && s.weight > 0 && s.reps > 0) {
           const previousSessionCount = await prisma.workoutSession.count({
             where: {
               userId,
-              sets: { some: { exerciseId: s.exerciseId } },
+              completedAt: { not: null },
+              sets: { some: { exerciseId: s.exerciseId, isWarmup: false, weight: { gt: 0 } } },
             },
           });
-          if (previousSessionCount >= 2) {
+          if (previousSessionCount >= 1) {
             const pr = await prisma.workoutSet.findFirst({
-              where: { session: { userId }, exerciseId: s.exerciseId, technique: 'NORMAL' },
+              where: { session: { userId }, exerciseId: s.exerciseId, technique: 'NORMAL', isWarmup: false, weight: { gt: 0 } },
               orderBy: { weight: 'desc' },
             });
             isPR = !pr || s.weight > pr.weight;
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest) {
             isPR: s.isPR,
             technique: 'NORMAL',
             attachedTechnique: s.attachedTechnique ?? null,
+            side: s.side ?? null,
             tempo: s.tempo ?? null,
             targetRIR: s.targetRIR ?? null,
             targetRPE: s.targetRPE ?? null,

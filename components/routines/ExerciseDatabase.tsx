@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronDown, ChevronRight, Plus, X, Dumbbell,
+  ChevronRight, Plus, X, Dumbbell,
 } from 'lucide-react';
 import { MG_CONFIG, COLOR_STYLES, type NeonColor } from '@/lib/muscleGroupConfig';
 import { NeonInput } from '@/components/ui/NeonInput';
@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
 import { getExerciseMeta, type MovementType } from '@/lib/exerciseMetadata';
 import { useI18n } from '@/components/providers/I18nProvider';
+import { ExerciseDetailPanel } from '@/components/routines/ExerciseDetailPanel';
 import toast from 'react-hot-toast';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -179,8 +180,7 @@ function AddToRoutineModal({ exercise, onClose }: { exercise: Exercise; onClose:
 
 // ── Exercise card ──────────────────────────────────────────────────────────
 
-function ExerciseCard({ exercise, color }: { exercise: Exercise; color: NeonColor }) {
-  const [expanded, setExpanded] = useState(false);
+function ExerciseCard({ exercise, color, onSelect }: { exercise: Exercise; color: NeonColor; onSelect: (ex: Exercise) => void }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const { t } = useI18n();
   const meta = getExerciseMeta(exercise.name);
@@ -188,15 +188,10 @@ function ExerciseCard({ exercise, color }: { exercise: Exercise; color: NeonColo
 
   return (
     <>
-      <div
-        className={cn(
-          'bg-dark-card transition-all duration-200 overflow-hidden',
-          expanded ? `border-l-2 ${styles.border.replace('border-', 'border-l-')}` : '',
-        )}
-      >
+      <div className="bg-dark-card overflow-hidden">
         <button
           className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-dark-hover/30 transition-colors"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={() => onSelect(exercise)}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -215,54 +210,17 @@ function ExerciseCard({ exercise, color }: { exercise: Exercise; color: NeonColo
               </span>
             </div>
           </div>
-          <ChevronDown
-            size={14}
-            className={cn('text-slate-500 transition-transform duration-200 shrink-0', expanded && 'rotate-180')}
-          />
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowAddModal(true); }}
+            className={cn(
+              'shrink-0 p-1.5 rounded-lg border transition-all hover:opacity-80',
+              styles.bg, styles.border, styles.text,
+            )}
+            title={t('exdb.addToRoutine')}
+          >
+            <Plus size={13} />
+          </button>
         </button>
-
-        {expanded && (
-          <div className={cn('px-4 pb-4 pt-3 space-y-3', styles.bg)}>
-            <p className="text-xs text-slate-400 leading-relaxed">{meta.description}</p>
-
-            <div className="grid grid-cols-2 gap-3">
-              {meta.primaryMuscles.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{t('exdb.primary')}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {meta.primaryMuscles.map((m) => (
-                      <span key={m} className={cn('text-[10px] px-1.5 py-0.5 rounded-full border font-medium', styles.badge)}>
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {meta.secondaryMuscles.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1.5">{t('exdb.secondary')}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {meta.secondaryMuscles.map((m) => (
-                      <span key={m} className="text-[10px] px-1.5 py-0.5 rounded-full border border-dark-border text-slate-500">
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowAddModal(true); }}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all hover:opacity-80',
-                styles.bg, styles.border, styles.text,
-              )}
-            >
-              <Plus size={12} /> {t('exdb.addToRoutine')}
-            </button>
-          </div>
-        )}
       </div>
 
       {showAddModal && (
@@ -274,7 +232,7 @@ function ExerciseCard({ exercise, color }: { exercise: Exercise; color: NeonColo
 
 // ── Muscle group section ───────────────────────────────────────────────────
 
-function MuscleGroupSection({ muscleGroup, exercises }: { muscleGroup: string; exercises: Exercise[] }) {
+function MuscleGroupSection({ muscleGroup, exercises, onSelect }: { muscleGroup: string; exercises: Exercise[]; onSelect: (ex: Exercise) => void }) {
   const [open, setOpen] = useState(true);
   const { t } = useI18n();
   const cfg = MG_CONFIG[muscleGroup] ?? { color: 'green' as NeonColor, Icon: Dumbbell, labelKey: 'muscle.' + muscleGroup, order: 99 };
@@ -301,7 +259,7 @@ function MuscleGroupSection({ muscleGroup, exercises }: { muscleGroup: string; e
       {open && (
         <div className="divide-y divide-dark-border/50">
           {exercises.map((ex) => (
-            <ExerciseCard key={ex.id} exercise={ex} color={cfg.color} />
+            <ExerciseCard key={ex.id} exercise={ex} color={cfg.color} onSelect={onSelect} />
           ))}
         </div>
       )}
@@ -314,6 +272,7 @@ function MuscleGroupSection({ muscleGroup, exercises }: { muscleGroup: string; e
 export function ExerciseDatabase() {
   const [search, setSearch] = useState('');
   const [equipFilter, setEquipFilter] = useState<string | null>(null);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const { t } = useI18n();
 
   const { data: exercises, isLoading } = useQuery<Exercise[]>({
@@ -344,6 +303,10 @@ export function ExerciseDatabase() {
   }, [filtered]);
 
   const isFiltering = search.trim().length > 0 || equipFilter !== null;
+
+  if (selectedExercise) {
+    return <ExerciseDetailPanel exercise={selectedExercise} onBack={() => setSelectedExercise(null)} />;
+  }
 
   return (
     <div className="space-y-4">
@@ -400,7 +363,7 @@ export function ExerciseDatabase() {
       {!isLoading && grouped.length > 0 && (
         <div className="space-y-3">
           {grouped.map(([mg, exes]) => (
-            <MuscleGroupSection key={mg} muscleGroup={mg} exercises={exes} />
+            <MuscleGroupSection key={mg} muscleGroup={mg} exercises={exes} onSelect={setSelectedExercise} />
           ))}
         </div>
       )}

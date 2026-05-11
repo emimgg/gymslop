@@ -43,3 +43,14 @@ export const COLOR_STYLES: Record<NeonColor, {
   red:    { text: 'text-neon-red',    border: 'border-neon-red/40',    bg: 'bg-neon-red/10',    headerBg: 'bg-neon-red/5',    badge: 'bg-neon-red/15 text-neon-red border border-neon-red/30',         dot: 'bg-neon-red'    },
   blue:   { text: 'text-neon-blue',   border: 'border-neon-blue/40',   bg: 'bg-neon-blue/10',   headerBg: 'bg-neon-blue/5',   badge: 'bg-neon-blue/15 text-neon-blue border border-neon-blue/30',     dot: 'bg-neon-blue'   },
 };
+
+export const NEON_CHART_COLOR: Record<NeonColor, string> = {
+  cyan:   '#00f5ff',
+  green:  '#39ff14',
+  yellow: '#ffff00',
+  pink:   '#ff2d78',
+  purple: '#bf00ff',
+  orange: '#ff6600',
+  red:    '#dc2626',
+  blue:   '#38bdf8',
+};

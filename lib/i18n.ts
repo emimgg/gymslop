@@ -139,6 +139,95 @@ const es = {
   'ex.Lateral Neck Flexion': 'Flexión Lateral de Cuello',
   'ex.Neck Harness': 'Cuello con Arnés',
 
+  // New exercises — Traps/Neck
+  'ex.Dumbbell Shrug': 'Encogimientos con Mancuernas',
+  'ex.Machine Shrug': 'Encogimientos en Máquina',
+  'ex.Cable Shrug': 'Encogimientos en Cable',
+  // Forearms
+  'ex.Barbell Wrist Curl': 'Curl de Muñeca con Barra',
+  'ex.Reverse Wrist Curl': 'Curl de Muñeca Inverso',
+  'ex.Dumbbell Wrist Curl': 'Curl de Muñeca con Mancuernas',
+  'ex.Cable Wrist Curl': 'Curl de Muñeca en Cable',
+  'ex.Farmers Carry': 'Cargada del Granjero',
+  // Biceps
+  'ex.Concentration Curl': 'Curl Concentrado',
+  'ex.Spider Curl': 'Curl en Spider',
+  'ex.Machine Bicep Curl': 'Curl en Máquina',
+  // Triceps
+  'ex.Tricep Kickback': 'Patada de Tríceps',
+  'ex.Machine Tricep Extension': 'Extensión de Tríceps en Máquina',
+  'ex.Diamond Push-Up': 'Flexión de Tríceps (Diamante)',
+  // Core
+  'ex.Ab Wheel Rollout': 'Rueda Abdominal',
+  'ex.Decline Crunch': 'Crunch Declinado',
+  'ex.Cable Woodchop': 'Leñador en Polea',
+  'ex.Side Plank': 'Plancha Lateral',
+  // Chest
+  'ex.High to Low Cable Fly': 'Aperturas en Cable Alto a Bajo',
+  'ex.Chest Dips': 'Fondos para Pecho',
+  // Back
+  'ex.Pendlay Row': 'Remo Pendlay',
+  'ex.Chest Supported Row': 'Remo en Banco Apoyado',
+  'ex.Machine Row': 'Remo en Máquina',
+  // Shoulders
+  'ex.Upright Row': 'Remo al Mentón',
+  'ex.Machine Lateral Raise': 'Elevaciones Laterales en Máquina',
+  'ex.Cable Front Raise': 'Elevaciones Frontales en Cable',
+  // Quads / Adductors
+  'ex.Goblet Squat': 'Sentadilla Goblet',
+  'ex.Split Squat': 'Sentadilla Dividida',
+  'ex.Sissy Squat': 'Sissy Squat',
+  'ex.Sumo Squat': 'Sentadilla Sumo',
+  'ex.Machine Hip Adduction': 'Aducción de Cadera en Máquina',
+  'ex.Cable Hip Adduction': 'Aducción de Cadera en Cable',
+  // Hamstrings
+  'ex.Nordic Curl': 'Curl Nórdico',
+  'ex.Good Morning': 'Buenos Días (Good Morning)',
+  // Glutes
+  'ex.Sumo Deadlift': 'Peso Muerto Sumo',
+  'ex.Step Up': 'Step Up',
+  'ex.Curtsy Lunge': 'Zancada Cruzada',
+  // Calves
+  'ex.Single Leg Calf Raise': 'Elevación de Talones a Una Pierna',
+
+  // Unilateral
+  'unilateral.label': 'Unilateral',
+  'unilateral.toggle': 'Marcar como unilateral (un brazo/pierna)',
+  'unilateral.badge': '1×',
+  'unilateral.left': 'Izq',
+  'unilateral.right': 'Der',
+  'unilateral.both': 'Ambos',
+  'unilateral.sideLabel': 'Lado',
+
+  // Compare days
+  'compare.title': 'Comparar días',
+  'compare.selectDay1': 'Día A',
+  'compare.selectDay2': 'Día B',
+  'compare.noDay': 'Seleccionar día',
+  'compare.exercises': 'Ejercicios',
+  'compare.totalSets': 'Series totales',
+  'compare.estDuration': 'Duración est.',
+  'compare.muscles': 'Músculos',
+  'compare.btn': 'Comparar días',
+
+  // Exercise detail
+  'exDetail.title': 'Historial',
+  'exDetail.noHistory': 'Aún no registraste este ejercicio',
+  'exDetail.noHistoryDesc': '¡Completá una serie y volvé a ver tu progreso acá!',
+  'exDetail.pr': 'Mejor marca',
+  'exDetail.timesPerformed': 'Veces realizadas',
+  'exDetail.firstDate': 'Primera vez',
+  'exDetail.lastDate': 'Última vez',
+  'exDetail.recentSessions': 'Últimas sesiones',
+  'exDetail.e1rmChart': 'Progresión de 1RM estimado',
+  'exDetail.back': '← Volver',
+  'exDetail.e1rmLabel': '1RM est.',
+
+  // PR log
+  'progress.prLog': 'Historial de PRs',
+  'progress.prLogEmpty': 'Aún no tenés PRs registrados. ¡Superá un peso anterior y aparecerá acá!',
+  'progress.prLogDesc': 'Últimos 10 PRs rotos',
+
   // Exercise Database UI
   'exdb.searchPlaceholder': 'Buscar ejercicios…',
   'exdb.resultFound': '{{n}} ejercicio encontrado',
@@ -1661,6 +1750,95 @@ const en: Record<keyof typeof es, string> = {
 
   // Progress grouped by muscle
   'progress.grouped': 'Grouped by muscle',
+
+  // New exercises — Traps/Neck
+  'ex.Dumbbell Shrug': 'Dumbbell Shrug',
+  'ex.Machine Shrug': 'Machine Shrug',
+  'ex.Cable Shrug': 'Cable Shrug',
+  // Forearms
+  'ex.Barbell Wrist Curl': 'Barbell Wrist Curl',
+  'ex.Reverse Wrist Curl': 'Reverse Wrist Curl',
+  'ex.Dumbbell Wrist Curl': 'Dumbbell Wrist Curl',
+  'ex.Cable Wrist Curl': 'Cable Wrist Curl',
+  'ex.Farmers Carry': 'Farmers Carry',
+  // Biceps
+  'ex.Concentration Curl': 'Concentration Curl',
+  'ex.Spider Curl': 'Spider Curl',
+  'ex.Machine Bicep Curl': 'Machine Bicep Curl',
+  // Triceps
+  'ex.Tricep Kickback': 'Tricep Kickback',
+  'ex.Machine Tricep Extension': 'Machine Tricep Extension',
+  'ex.Diamond Push-Up': 'Diamond Push-Up',
+  // Core
+  'ex.Ab Wheel Rollout': 'Ab Wheel Rollout',
+  'ex.Decline Crunch': 'Decline Crunch',
+  'ex.Cable Woodchop': 'Cable Woodchop',
+  'ex.Side Plank': 'Side Plank',
+  // Chest
+  'ex.High to Low Cable Fly': 'High to Low Cable Fly',
+  'ex.Chest Dips': 'Chest Dips',
+  // Back
+  'ex.Pendlay Row': 'Pendlay Row',
+  'ex.Chest Supported Row': 'Chest Supported Row',
+  'ex.Machine Row': 'Machine Row',
+  // Shoulders
+  'ex.Upright Row': 'Upright Row',
+  'ex.Machine Lateral Raise': 'Machine Lateral Raise',
+  'ex.Cable Front Raise': 'Cable Front Raise',
+  // Quads / Adductors
+  'ex.Goblet Squat': 'Goblet Squat',
+  'ex.Split Squat': 'Split Squat',
+  'ex.Sissy Squat': 'Sissy Squat',
+  'ex.Sumo Squat': 'Sumo Squat',
+  'ex.Machine Hip Adduction': 'Machine Hip Adduction',
+  'ex.Cable Hip Adduction': 'Cable Hip Adduction',
+  // Hamstrings
+  'ex.Nordic Curl': 'Nordic Curl',
+  'ex.Good Morning': 'Good Morning',
+  // Glutes
+  'ex.Sumo Deadlift': 'Sumo Deadlift',
+  'ex.Step Up': 'Step Up',
+  'ex.Curtsy Lunge': 'Curtsy Lunge',
+  // Calves
+  'ex.Single Leg Calf Raise': 'Single Leg Calf Raise',
+
+  // Unilateral
+  'unilateral.label': 'Unilateral',
+  'unilateral.toggle': 'Mark as unilateral (one arm/leg)',
+  'unilateral.badge': '1×',
+  'unilateral.left': 'L',
+  'unilateral.right': 'R',
+  'unilateral.both': 'Both',
+  'unilateral.sideLabel': 'Side',
+
+  // Compare days
+  'compare.title': 'Compare days',
+  'compare.selectDay1': 'Day A',
+  'compare.selectDay2': 'Day B',
+  'compare.noDay': 'Select day',
+  'compare.exercises': 'Exercises',
+  'compare.totalSets': 'Total sets',
+  'compare.estDuration': 'Est. duration',
+  'compare.muscles': 'Muscles',
+  'compare.btn': 'Compare days',
+
+  // Exercise detail
+  'exDetail.title': 'History',
+  'exDetail.noHistory': "You haven't logged this exercise yet",
+  'exDetail.noHistoryDesc': 'Complete a set and come back to see your progress!',
+  'exDetail.pr': 'Personal best',
+  'exDetail.timesPerformed': 'Times performed',
+  'exDetail.firstDate': 'First time',
+  'exDetail.lastDate': 'Last time',
+  'exDetail.recentSessions': 'Recent sessions',
+  'exDetail.e1rmChart': 'Estimated 1RM progression',
+  'exDetail.back': '← Back',
+  'exDetail.e1rmLabel': 'Est. 1RM',
+
+  // PR log
+  'progress.prLog': 'PR History',
+  'progress.prLogEmpty': 'No PRs recorded yet. Beat a previous weight and it will show up here!',
+  'progress.prLogDesc': 'Last 10 PRs broken',
 };
 
 export const translations: Record<Lang, Record<string, string>> = { es, en };

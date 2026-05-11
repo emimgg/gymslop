@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
       data: {
         name: name ?? existing.name,
         days: {
-          create: (days ?? []).map((day: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight?: number; setTechniques?: string[]; targetRIR?: number | null; targetRPE?: number | null }[] }) => ({
+          create: (days ?? []).map((day: { dayOfWeek: number; exercises: { exerciseId: string; order: number; targetSets: number; targetReps: number; targetWeight?: number; setTechniques?: string[]; targetRIR?: number | null; targetRPE?: number | null; isUnilateral?: boolean }[] }) => ({
             dayOfWeek: day.dayOfWeek,
             exercises: {
               create: day.exercises.map((ex) => ({
@@ -53,6 +53,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
                 setTechniques: ex.setTechniques ?? [],
                 targetRIR: ex.targetRIR ?? null,
                 targetRPE: ex.targetRPE ?? null,
+                isUnilateral: ex.isUnilateral ?? false,
               })),
             },
           })),

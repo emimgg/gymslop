@@ -35,6 +35,10 @@ async function main() {
     { name: 'Pec Deck Machine',           muscleGroup: MuscleGroup.CHEST,     equipment: Equipment.MACHINE    },
     { name: 'Push-Up',                    muscleGroup: MuscleGroup.CHEST,     equipment: Equipment.BODYWEIGHT },
     { name: 'Chest Press Machine',        muscleGroup: MuscleGroup.CHEST,     equipment: Equipment.MACHINE    },
+    // Chest (additional)
+    { name: 'Dumbbell Fly',              muscleGroup: MuscleGroup.CHEST,     equipment: Equipment.DUMBBELL,  stretchFocused: true },
+    { name: 'High to Low Cable Fly',     muscleGroup: MuscleGroup.CHEST,     equipment: Equipment.CABLE,     stretchFocused: true },
+    { name: 'Chest Dips',                muscleGroup: MuscleGroup.CHEST,     equipment: Equipment.BODYWEIGHT },
     // Back
     { name: 'Deadlift',                   muscleGroup: MuscleGroup.BACK,      equipment: Equipment.BARBELL    },
     { name: 'Barbell Row',                muscleGroup: MuscleGroup.BACK,      equipment: Equipment.BARBELL    },
@@ -47,6 +51,9 @@ async function main() {
     { name: 'T-Bar Row',                  muscleGroup: MuscleGroup.BACK,      equipment: Equipment.BARBELL    },
     { name: 'Single-Arm Dumbbell Row',    muscleGroup: MuscleGroup.BACK,      equipment: Equipment.DUMBBELL   },
     { name: 'Cable Pullover',             muscleGroup: MuscleGroup.BACK,      equipment: Equipment.CABLE,     stretchFocused: true },
+    { name: 'Pendlay Row',               muscleGroup: MuscleGroup.BACK,      equipment: Equipment.BARBELL    },
+    { name: 'Chest Supported Row',       muscleGroup: MuscleGroup.BACK,      equipment: Equipment.DUMBBELL   },
+    { name: 'Machine Row',               muscleGroup: MuscleGroup.BACK,      equipment: Equipment.MACHINE    },
     // Shoulders
     { name: 'Overhead Press (OHP)',       muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.BARBELL    },
     { name: 'Dumbbell Shoulder Press',    muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.DUMBBELL   },
@@ -56,12 +63,24 @@ async function main() {
     { name: 'Rear Delt Fly',              muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.DUMBBELL   },
     { name: 'Arnold Press',               muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.DUMBBELL   },
     { name: 'Face Pull',                  muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.CABLE      },
-    { name: 'Barbell Shrug',              muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.BARBELL    },
-    // Neck
+    { name: 'Upright Row',               muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.BARBELL    },
+    { name: 'Machine Lateral Raise',     muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.MACHINE    },
+    { name: 'Cable Front Raise',         muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.CABLE      },
+    { name: 'Barbell Shrug',             muscleGroup: MuscleGroup.NECK,      equipment: Equipment.BARBELL    },
+    // Neck / Traps
     { name: 'Neck Flexion',              muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
     { name: 'Neck Extension',            muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
     { name: 'Lateral Neck Flexion',      muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
     { name: 'Neck Harness',              muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
+    { name: 'Dumbbell Shrug',            muscleGroup: MuscleGroup.NECK,      equipment: Equipment.DUMBBELL   },
+    { name: 'Machine Shrug',             muscleGroup: MuscleGroup.NECK,      equipment: Equipment.MACHINE    },
+    { name: 'Cable Shrug',               muscleGroup: MuscleGroup.NECK,      equipment: Equipment.CABLE      },
+    // Forearms
+    { name: 'Barbell Wrist Curl',        muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.BARBELL    },
+    { name: 'Reverse Wrist Curl',        muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.BARBELL    },
+    { name: 'Dumbbell Wrist Curl',       muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.DUMBBELL   },
+    { name: 'Cable Wrist Curl',          muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.CABLE      },
+    { name: 'Farmers Carry',             muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.DUMBBELL   },
     // Biceps
     { name: 'Barbell Curl',              muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.BARBELL    },
     { name: 'Dumbbell Curl',             muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.DUMBBELL   },
@@ -71,6 +90,9 @@ async function main() {
     { name: 'Bayesian Cable Curl',       muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.CABLE,     stretchFocused: true },
     { name: 'Incline Dumbbell Curl',     muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.DUMBBELL,  stretchFocused: true },
     { name: 'Low Pulley Cable Curl',     muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.CABLE      },
+    { name: 'Concentration Curl',        muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.DUMBBELL   },
+    { name: 'Spider Curl',               muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.DUMBBELL   },
+    { name: 'Machine Bicep Curl',        muscleGroup: MuscleGroup.BICEPS,    equipment: Equipment.MACHINE    },
     // Triceps
     { name: 'Tricep Pushdown',                muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.CABLE      },
     { name: 'Cable Rope Tricep Extension',    muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.CABLE      },
@@ -79,12 +101,19 @@ async function main() {
     { name: 'Overhead Tricep Extension',      muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.DUMBBELL   },
     { name: 'Overhead Cable Tricep Extension',muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.CABLE,     stretchFocused: true },
     { name: 'Tricep Dips',                    muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.BODYWEIGHT },
+    { name: 'Tricep Kickback',               muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.DUMBBELL   },
+    { name: 'Machine Tricep Extension',      muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.MACHINE    },
+    { name: 'Diamond Push-Up',               muscleGroup: MuscleGroup.TRICEPS,   equipment: Equipment.BODYWEIGHT },
     // Core
     { name: 'Plank',              muscleGroup: MuscleGroup.CORE,       equipment: Equipment.BODYWEIGHT },
     { name: 'Cable Crunch',       muscleGroup: MuscleGroup.CORE,       equipment: Equipment.CABLE      },
     { name: 'Machine Crunch',     muscleGroup: MuscleGroup.CORE,       equipment: Equipment.MACHINE    },
     { name: 'Hanging Leg Raise',  muscleGroup: MuscleGroup.CORE,       equipment: Equipment.BODYWEIGHT },
     { name: 'Russian Twist',      muscleGroup: MuscleGroup.CORE,       equipment: Equipment.BODYWEIGHT },
+    { name: 'Ab Wheel Rollout',   muscleGroup: MuscleGroup.CORE,       equipment: Equipment.OTHER      },
+    { name: 'Decline Crunch',     muscleGroup: MuscleGroup.CORE,       equipment: Equipment.BODYWEIGHT },
+    { name: 'Cable Woodchop',     muscleGroup: MuscleGroup.CORE,       equipment: Equipment.CABLE      },
+    { name: 'Side Plank',         muscleGroup: MuscleGroup.CORE,       equipment: Equipment.BODYWEIGHT },
     // Quads
     { name: 'Squat',                  muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.BARBELL    },
     { name: 'Front Squat',            muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.BARBELL    },
@@ -93,20 +122,34 @@ async function main() {
     { name: 'Leg Extension',          muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.MACHINE    },
     { name: 'Bulgarian Split Squat',  muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.DUMBBELL   },
     { name: 'Walking Lunges',         muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.DUMBBELL   },
+    { name: 'Goblet Squat',           muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.DUMBBELL   },
+    { name: 'Split Squat',            muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.DUMBBELL   },
+    { name: 'Sissy Squat',            muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.BODYWEIGHT },
+    { name: 'Sumo Squat',             muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.DUMBBELL   },
+    // Adductors (inner thigh) — categorised under QUADS
+    { name: 'Machine Hip Adduction',  muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.MACHINE    },
+    { name: 'Cable Hip Adduction',    muscleGroup: MuscleGroup.QUADS,      equipment: Equipment.CABLE      },
     // Hamstrings
     { name: 'Romanian Deadlift (RDL)', muscleGroup: MuscleGroup.HAMSTRINGS, equipment: Equipment.BARBELL,   stretchFocused: true },
     { name: 'Leg Curl',                muscleGroup: MuscleGroup.HAMSTRINGS, equipment: Equipment.MACHINE    },
     { name: 'Seated Leg Curl',         muscleGroup: MuscleGroup.HAMSTRINGS, equipment: Equipment.MACHINE,   stretchFocused: true },
     { name: 'Stiff-Leg Deadlift',      muscleGroup: MuscleGroup.HAMSTRINGS, equipment: Equipment.BARBELL    },
+    { name: 'Nordic Curl',             muscleGroup: MuscleGroup.HAMSTRINGS, equipment: Equipment.BODYWEIGHT, stretchFocused: true },
+    { name: 'Good Morning',            muscleGroup: MuscleGroup.HAMSTRINGS, equipment: Equipment.BARBELL,   stretchFocused: true },
     // Glutes
     { name: 'Hip Thrust',           muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.BARBELL    },
     { name: 'Machine Hip Thrust',   muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.MACHINE    },
     { name: 'Glute Bridge',         muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.BODYWEIGHT },
     { name: 'Cable Kickback',       muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.CABLE      },
     { name: 'Machine Hip Abduction',muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.MACHINE    },
-    // Calves — Seated/Donkey removed (replaced by Standing + Leg Press variants)
+    { name: 'Sumo Deadlift',        muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.BARBELL    },
+    { name: 'Step Up',              muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.DUMBBELL   },
+    { name: 'Curtsy Lunge',         muscleGroup: MuscleGroup.GLUTES,     equipment: Equipment.DUMBBELL   },
+    // Calves
     { name: 'Standing Calf Raise',     muscleGroup: MuscleGroup.CALVES,    equipment: Equipment.MACHINE    },
     { name: 'Calf Raise on Leg Press', muscleGroup: MuscleGroup.CALVES,    equipment: Equipment.MACHINE    },
+    { name: 'Seated Calf Raise',       muscleGroup: MuscleGroup.CALVES,    equipment: Equipment.MACHINE    },
+    { name: 'Single Leg Calf Raise',   muscleGroup: MuscleGroup.CALVES,    equipment: Equipment.BODYWEIGHT },
     // Full body / Cardio
     { name: 'Clean and Press',   muscleGroup: MuscleGroup.FULL_BODY, equipment: Equipment.BARBELL    },
     { name: 'Kettlebell Swing',  muscleGroup: MuscleGroup.FULL_BODY, equipment: Equipment.KETTLEBELL },
@@ -122,7 +165,7 @@ async function main() {
   console.log(`  ✓ ${exercises.length} exercises upserted`);
 
   // Try to remove deprecated exercises (only if they have no workout history)
-  const DEPRECATED = ['Crunch', 'Seated Calf Raise', 'Donkey Calf Raise', 'Dumbbell Pullover'];
+  const DEPRECATED = ['Crunch', 'Donkey Calf Raise', 'Dumbbell Pullover'];
   for (const name of DEPRECATED) {
     try {
       const ex = await prisma.exercise.findFirst({ where: { name, isCustom: false } });
