@@ -36,7 +36,7 @@ const es = {
 
   // Muscle groups (DB enum)
   'muscle.CHEST': 'Pecho', 'muscle.BACK': 'Espalda',
-  'muscle.SHOULDERS': 'Hombros', 'muscle.NECK': 'Cuello', 'muscle.BICEPS': 'Bíceps',
+  'muscle.SHOULDERS': 'Hombros', 'muscle.TRAPS': 'Trapecios', 'muscle.NECK': 'Cuello', 'muscle.BICEPS': 'Bíceps',
   'muscle.TRICEPS': 'Tríceps', 'muscle.FOREARMS': 'Antebrazos',
   'muscle.CORE': 'Core', 'muscle.QUADS': 'Cuádriceps',
   'muscle.HAMSTRINGS': 'Isquiotibiales', 'muscle.GLUTES': 'Glúteos',
@@ -995,7 +995,7 @@ const en: Record<keyof typeof es, string> = {
   'dayFull.3': 'Wednesday', 'dayFull.4': 'Thursday', 'dayFull.5': 'Friday', 'dayFull.6': 'Saturday',
 
   'muscle.CHEST': 'Chest', 'muscle.BACK': 'Back', 'muscle.SHOULDERS': 'Shoulders',
-  'muscle.NECK': 'Neck', 'muscle.BICEPS': 'Biceps', 'muscle.TRICEPS': 'Triceps', 'muscle.FOREARMS': 'Forearms',
+  'muscle.TRAPS': 'Traps', 'muscle.NECK': 'Neck', 'muscle.BICEPS': 'Biceps', 'muscle.TRICEPS': 'Triceps', 'muscle.FOREARMS': 'Forearms',
   'muscle.CORE': 'Core', 'muscle.QUADS': 'Quads', 'muscle.HAMSTRINGS': 'Hamstrings',
   'muscle.GLUTES': 'Glutes', 'muscle.CALVES': 'Calves', 'muscle.FULL_BODY': 'Full Body',
   'muscle.CARDIO': 'Cardio', 'muscle.LEGS': 'Legs', 'muscle.ARMS': 'Arms',

@@ -66,15 +66,16 @@ async function main() {
     { name: 'Upright Row',               muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.BARBELL    },
     { name: 'Machine Lateral Raise',     muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.MACHINE    },
     { name: 'Cable Front Raise',         muscleGroup: MuscleGroup.SHOULDERS, equipment: Equipment.CABLE      },
-    { name: 'Barbell Shrug',             muscleGroup: MuscleGroup.NECK,      equipment: Equipment.BARBELL    },
-    // Neck / Traps
+    // Traps (shrugs — upper trapezius focus)
+    { name: 'Barbell Shrug',             muscleGroup: MuscleGroup.TRAPS,     equipment: Equipment.BARBELL    },
+    { name: 'Dumbbell Shrug',            muscleGroup: MuscleGroup.TRAPS,     equipment: Equipment.DUMBBELL   },
+    { name: 'Machine Shrug',             muscleGroup: MuscleGroup.TRAPS,     equipment: Equipment.MACHINE    },
+    { name: 'Cable Shrug',               muscleGroup: MuscleGroup.TRAPS,     equipment: Equipment.CABLE      },
+    // Neck
     { name: 'Neck Flexion',              muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
     { name: 'Neck Extension',            muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
     { name: 'Lateral Neck Flexion',      muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
     { name: 'Neck Harness',              muscleGroup: MuscleGroup.NECK,      equipment: Equipment.OTHER      },
-    { name: 'Dumbbell Shrug',            muscleGroup: MuscleGroup.NECK,      equipment: Equipment.DUMBBELL   },
-    { name: 'Machine Shrug',             muscleGroup: MuscleGroup.NECK,      equipment: Equipment.MACHINE    },
-    { name: 'Cable Shrug',               muscleGroup: MuscleGroup.NECK,      equipment: Equipment.CABLE      },
     // Forearms
     { name: 'Barbell Wrist Curl',        muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.BARBELL    },
     { name: 'Reverse Wrist Curl',        muscleGroup: MuscleGroup.FOREARMS,  equipment: Equipment.BARBELL    },

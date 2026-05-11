@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { NeonButton } from '@/components/ui/NeonButton';
 import { Modal } from '@/components/ui/Modal';
 import { NeonInput } from '@/components/ui/NeonInput';
-import { Trophy, Timer, Check, X, Flame, Plus, Zap } from 'lucide-react';
+import { Trophy, Timer, Check, X, Flame, Plus, Zap, Settings2 } from 'lucide-react';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { cn } from '@/lib/utils';
 import { TECHNIQUE_ORDER, TECHNIQUE_STYLES, type SetTechniqueKey } from '@/lib/techniques';
@@ -231,53 +231,52 @@ export function WorkoutSession({ onComplete, onCancel }: WorkoutSessionProps) {
   return (
     <div className="fixed inset-0 z-[100] bg-dark-bg overflow-y-auto">
       <div className="max-w-2xl mx-auto p-4 pb-32">
-        {/* Header */}
-        <div className="flex items-center justify-between py-3 mb-2 sticky top-0 bg-dark-bg z-10 border-b border-dark-border">
-          <div>
-            <h2 className="font-bold text-slate-100">{activeWorkout?.routine.name}</h2>
-            <p className="text-xs text-slate-500">{t('session.setsDone', { done: doneSets, total: totalSets })}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-neon-cyan font-mono text-sm">
-              <Timer size={14} />
-              {formatTime(elapsed)}
+        {/* Header — sticky, two rows on mobile when rest active */}
+        <div className="sticky top-0 bg-dark-bg z-10 border-b border-dark-border py-3 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <h2 className="font-bold text-slate-100 truncate">{activeWorkout?.routine.name}</h2>
+              <p className="text-xs text-slate-500">{t('session.setsDone', { done: doneSets, total: totalSets })}</p>
             </div>
-            {restCountdown > 0 && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setRestCountdown((r) => Math.max(0, r - 15))}
-                  title={t('session.restSub')}
-                  className="text-[11px] text-slate-500 hover:text-neon-yellow transition-colors px-1 py-0.5 rounded"
-                >
-                  {t('session.restSub')}
-                </button>
-                <div className="flex items-center gap-1 text-neon-yellow text-sm font-mono px-2 py-1 rounded border border-neon-yellow/30 bg-neon-yellow/10">
-                  <Flame size={12} />
-                  {formatTime(restCountdown)}
-                </div>
-                <button
-                  onClick={() => setRestCountdown((r) => r + 15)}
-                  title={t('session.restAdd')}
-                  className="text-[11px] text-slate-500 hover:text-neon-yellow transition-colors px-1 py-0.5 rounded"
-                >
-                  {t('session.restAdd')}
-                </button>
-                <button
-                  onClick={() => setRestCountdown(0)}
-                  title={t('session.restSkip')}
-                  className="text-slate-600 hover:text-slate-300 transition-colors p-0.5"
-                >
-                  <X size={12} />
-                </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 text-neon-cyan font-mono text-sm">
+                <Timer size={13} />
+                <span>{formatTime(elapsed)}</span>
               </div>
-            )}
-            <button
-              onClick={() => setShowNavGuard(true)}
-              className="text-slate-500 hover:text-red-400 transition-colors p-1"
-            >
-              <X size={18} />
-            </button>
+              <button
+                onClick={() => setShowNavGuard(true)}
+                className="text-slate-500 hover:text-red-400 transition-colors p-2 -mr-2"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
+          {restCountdown > 0 && (
+            <div className="flex items-center justify-end gap-1 mt-2">
+              <button
+                onClick={() => setRestCountdown((r) => Math.max(0, r - 15))}
+                className="text-[11px] text-slate-500 hover:text-neon-yellow transition-colors px-2 py-1 rounded"
+              >
+                {t('session.restSub')}
+              </button>
+              <div className="flex items-center gap-1 text-neon-yellow text-sm font-mono px-2 py-1 rounded border border-neon-yellow/30 bg-neon-yellow/10">
+                <Flame size={12} />
+                {formatTime(restCountdown)}
+              </div>
+              <button
+                onClick={() => setRestCountdown((r) => r + 15)}
+                className="text-[11px] text-slate-500 hover:text-neon-yellow transition-colors px-2 py-1 rounded"
+              >
+                {t('session.restAdd')}
+              </button>
+              <button
+                onClick={() => setRestCountdown(0)}
+                className="text-slate-600 hover:text-slate-300 transition-colors p-1"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -425,8 +424,9 @@ function ExerciseCard({
 }) {
   const { t } = useI18n();
   const [techniquePickerFor, setTechniquePickerFor] = useState<number | null>(null);
+  const [showAdvancedFor, setShowAdvancedFor] = useState<Set<number>>(new Set());
 
-  const weekday = new Date().getDay(); // 0=Sun, 1=Mon … 6=Sat — scopes Last/Best to this weekday
+  const weekday = new Date().getDay();
 
   const { data: history } = useQuery<{
     lastSets: { setNumber: number; reps: number; weight: number; technique?: string; attachedTechnique?: string | null }[];
@@ -439,36 +439,47 @@ function ExerciseCard({
 
   const doneSets = sets.filter((s) => s.done).length;
 
+  function toggleAdvanced(i: number) {
+    setShowAdvancedFor((prev) => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  }
+
   return (
     <Card neon={doneSets === sets.length && sets.length > 0 ? 'green' : null}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
-            {isUnilateral && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan font-semibold">
-                {t('unilateral.badge')}
+      {/* Card header */}
+      <div className="mb-3">
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-slate-200">{t('ex.' + exercise.name)}</h3>
+              {isUnilateral && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan font-semibold shrink-0">
+                  {t('unilateral.badge')}
+                </span>
+              )}
+            </div>
+            {advancedView && (targetRIR != null || targetRPE != null) && (
+              <p className="text-[10px] text-neon-purple mt-0.5">
+                {targetRIR != null && t('rir.target', { n: targetRIR })}
+                {targetRIR != null && targetRPE != null && ' · '}
+                {targetRPE != null && t('rpe.target', { n: targetRPE })}
+              </p>
+            )}
+            {history?.pr && (
+              <span className="flex items-center gap-1 text-xs text-neon-yellow mt-1">
+                <Trophy size={10} />
+                PR {history.pr.weight}kg × {history.pr.reps}
+                <span className="text-[9px] text-slate-500 font-normal">· {t('session.thisDayScope')}</span>
               </span>
             )}
           </div>
-          {advancedView && (targetRIR != null || targetRPE != null) && (
-            <p className="text-[10px] text-neon-purple mt-0.5">
-              {targetRIR != null && t('rir.target', { n: targetRIR })}
-              {targetRIR != null && targetRPE != null && ' · '}
-              {targetRPE != null && t('rpe.target', { n: targetRPE })}
-            </p>
-          )}
         </div>
-
-        {history?.pr && (
-          <span className="flex items-center gap-1 text-xs text-neon-yellow shrink-0">
-            <Trophy size={10} />
-            PR {history.pr.weight}kg × {history.pr.reps}
-            <span className="text-[9px] text-slate-500 font-normal">· {t('session.thisDayScope')}</span>
-          </span>
-        )}
       </div>
 
+      {/* Last workout preview */}
       {history?.lastSets && history.lastSets.length > 0 && (
         <div className="mb-3 p-2 rounded-lg bg-dark-bg/60 border border-dark-border">
           <div className="flex items-center gap-1.5 mb-1.5">
@@ -477,7 +488,6 @@ function ExerciseCard({
           </div>
           <div className="flex flex-wrap gap-2">
             {history.lastSets.map((s) => {
-              // Support both old technique field and new attachedTechnique field
               const techKey = s.attachedTechnique || (s.technique && s.technique !== 'NORMAL' ? s.technique : null);
               const techStyle = techKey ? TECHNIQUE_STYLES[techKey as SetTechniqueKey] : null;
               return (
@@ -501,106 +511,113 @@ function ExerciseCard({
         </div>
       )}
 
-      <div className="grid grid-cols-[18px_1fr_60px_60px_22px_26px] gap-1.5 text-[10px] text-slate-500 uppercase tracking-wider mb-1 px-1">
-        <span>#</span>
-        <span></span>
+      {/* Column headers */}
+      <div className="grid grid-cols-[28px_1fr_1fr_44px_44px] gap-2 text-[10px] text-slate-500 uppercase tracking-wider mb-1 px-1">
+        <span className="text-center">#</span>
         <span className="text-center">{t('session.reps')}</span>
         <span className="text-center">kg</span>
-        <span className="text-center"><Zap size={9} /></span>
+        <span className="flex justify-center"><Zap size={9} /></span>
         <span></span>
       </div>
 
-      <div className="space-y-1">
+      {/* Set rows */}
+      <div className="space-y-1.5">
         {sets.map((s, i) => {
           const attachedTech = s.attachedTechnique as SetTechniqueKey | undefined;
           const attachedStyle = attachedTech && attachedTech !== 'NORMAL' ? TECHNIQUE_STYLES[attachedTech] : null;
           const isPickerOpen = techniquePickerFor === i;
+          const isAdvancedOpen = showAdvancedFor.has(i);
 
           return (
-            <div key={i}>
+            <div key={i} className="space-y-1">
+              {/* Technique badge above row */}
+              {attachedStyle && !isPickerOpen && (
+                <div className="px-1">
+                  <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold inline-flex', attachedStyle.badgeClass)}>
+                    + {t(attachedStyle.labelKey)}
+                  </span>
+                </div>
+              )}
+
+              {/* Main set row */}
               <div
                 className={cn(
-                  'grid grid-cols-[18px_1fr_60px_60px_22px_26px] gap-1.5 items-center px-1 py-1.5 rounded-lg transition-colors',
+                  'grid grid-cols-[28px_1fr_1fr_44px_44px] gap-2 items-center px-1 py-1 rounded-xl transition-colors',
                   s.done ? 'bg-neon-green/10' : (attachedStyle?.rowBg || 'bg-dark-muted'),
                   attachedStyle?.rowBorder,
                 )}
               >
                 <span className="text-xs text-slate-500 text-center">{s.setNumber}</span>
-                <div className="min-w-0">
-                  {attachedStyle && (
-                    <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-semibold truncate block w-fit max-w-full', attachedStyle.badgeClass)}>
-                      + {t(attachedStyle.labelKey)}
-                    </span>
-                  )}
-                </div>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={s.reps || ''}
                   min={0}
                   placeholder="—"
                   onChange={(e) => onUpdate(i, 'reps', parseInt(e.target.value) || 0)}
-                  className="w-full text-center bg-dark-bg border border-dark-border rounded text-sm text-neon-cyan py-1 focus:outline-none focus:border-neon-cyan/50"
+                  className="w-full h-11 text-center bg-dark-bg border border-dark-border rounded-lg text-base text-neon-cyan focus:outline-none focus:border-neon-cyan/50"
                 />
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={s.weight || ''}
                   min={0}
                   step={0.5}
                   placeholder="—"
                   onChange={(e) => onUpdate(i, 'weight', parseFloat(e.target.value) || 0)}
-                  className="w-full text-center bg-dark-bg border border-dark-border rounded text-sm text-neon-green py-1 focus:outline-none focus:border-neon-green/50"
+                  className="w-full h-11 text-center bg-dark-bg border border-dark-border rounded-lg text-base text-neon-green focus:outline-none focus:border-neon-green/50"
                 />
                 <button
                   onClick={() => setTechniquePickerFor(isPickerOpen ? null : i)}
                   title={t('tech.attachTitle')}
                   className={cn(
-                    'w-5 h-5 flex items-center justify-center rounded transition-colors',
+                    'h-11 w-11 flex items-center justify-center rounded-lg transition-colors',
                     attachedStyle
                       ? attachedStyle.badgeClass
                       : isPickerOpen
-                      ? 'text-neon-yellow bg-neon-yellow/10'
-                      : 'text-slate-600 hover:text-neon-yellow',
+                      ? 'text-neon-yellow bg-neon-yellow/10 border border-neon-yellow/30'
+                      : 'text-slate-600 hover:text-neon-yellow bg-dark-bg border border-dark-border',
                   )}
                 >
-                  <Zap size={10} />
+                  <Zap size={14} />
                 </button>
                 <button
                   onClick={() => onToggle(i)}
                   className={cn(
-                    'w-6 h-6 rounded-full border flex items-center justify-center transition-all',
+                    'h-11 w-11 rounded-full border flex items-center justify-center transition-all',
                     s.done
                       ? 'bg-neon-green border-neon-green text-dark-bg'
-                      : 'border-dark-border text-slate-600 hover:border-neon-green/50 hover:text-neon-green',
+                      : 'border-dark-border text-slate-600 hover:border-neon-green/50 hover:text-neon-green bg-dark-bg',
                   )}
                 >
-                  <Check size={11} />
+                  <Check size={14} />
                 </button>
               </div>
 
-              {/* Tempo input for attached TEMPO technique */}
+              {/* Tempo input (TEMPO technique) */}
               {attachedTech === 'TEMPO' && !isPickerOpen && (
-                <div className="flex items-center gap-2 px-1 mt-0.5">
+                <div className="flex items-center gap-2 px-1">
                   <span className="text-[10px] text-neon-yellow shrink-0">{t('tech.tempoLabel')}:</span>
                   <input
                     type="text"
                     placeholder={t('tech.tempoPlaceholder')}
                     value={s.tempo}
                     onChange={(e) => onUpdateTempo(i, e.target.value)}
-                    className="flex-1 text-xs bg-dark-bg border border-neon-yellow/30 rounded px-2 py-0.5 text-neon-yellow focus:outline-none focus:border-neon-yellow/60 font-mono"
+                    className="flex-1 h-9 text-xs bg-dark-bg border border-neon-yellow/30 rounded-lg px-3 text-neon-yellow focus:outline-none focus:border-neon-yellow/60 font-mono"
                   />
                 </div>
               )}
 
               {/* Unilateral side selector */}
               {isUnilateral && (
-                <div className="flex items-center gap-1.5 px-1 mt-0.5">
+                <div className="flex items-center gap-2 px-1">
                   <span className="text-[10px] text-slate-500 shrink-0">{t('unilateral.sideLabel')}:</span>
                   {(['LEFT', 'RIGHT', null] as const).map((side) => (
                     <button
                       key={String(side)}
                       onClick={() => onUpdateSide(i, side)}
                       className={cn(
-                        'text-[10px] px-2 py-0.5 rounded border transition-all',
+                        'text-xs px-3 py-2 rounded-lg border transition-all',
                         s.side === side
                           ? side === 'LEFT'
                             ? 'border-neon-cyan/60 bg-neon-cyan/15 text-neon-cyan'
@@ -616,33 +633,50 @@ function ExerciseCard({
                 </div>
               )}
 
-              {/* Advanced View: Actual RIR/RPE input after set is done */}
+              {/* Advanced: RIR/RPE behind ⚙ gear (only after set is done) */}
               {advancedView && s.done && (
-                <div className="flex items-center gap-3 px-1 mt-0.5">
-                  <span className="text-[10px] text-slate-600">RIR:</span>
-                  <input
-                    type="number"
-                    min={0} max={5}
-                    placeholder="—"
-                    value={s.actualRIR ?? ''}
-                    onChange={(e) => onUpdateActualRIR(i, e.target.value === '' ? undefined : parseInt(e.target.value))}
-                    className="w-10 text-center bg-dark-bg border border-dark-border rounded text-[10px] text-neon-purple py-0.5 focus:outline-none"
-                  />
-                  <span className="text-[10px] text-slate-600">RPE:</span>
-                  <input
-                    type="number"
-                    min={6} max={10}
-                    placeholder="—"
-                    value={s.actualRPE ?? ''}
-                    onChange={(e) => onUpdateActualRPE(i, e.target.value === '' ? undefined : parseInt(e.target.value))}
-                    className="w-10 text-center bg-dark-bg border border-dark-border rounded text-[10px] text-neon-pink py-0.5 focus:outline-none"
-                  />
+                <div className="px-1">
+                  <button
+                    onClick={() => toggleAdvanced(i)}
+                    className={cn(
+                      'flex items-center gap-1.5 text-[10px] transition-colors',
+                      isAdvancedOpen ? 'text-neon-purple' : 'text-slate-600 hover:text-slate-400',
+                    )}
+                  >
+                    <Settings2 size={11} />
+                    RIR / RPE
+                  </button>
+                  {isAdvancedOpen && (
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-[10px] text-slate-600">RIR</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0} max={5}
+                        placeholder="—"
+                        value={s.actualRIR ?? ''}
+                        onChange={(e) => onUpdateActualRIR(i, e.target.value === '' ? undefined : parseInt(e.target.value))}
+                        className="w-14 h-9 text-center bg-dark-bg border border-dark-border rounded-lg text-sm text-neon-purple focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-600">RPE</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={6} max={10}
+                        placeholder="—"
+                        value={s.actualRPE ?? ''}
+                        onChange={(e) => onUpdateActualRPE(i, e.target.value === '' ? undefined : parseInt(e.target.value))}
+                        className="w-14 h-9 text-center bg-dark-bg border border-dark-border rounded-lg text-sm text-neon-pink focus:outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
+              {/* Technique picker */}
               {isPickerOpen && (
-                <div className="mt-1 p-2 rounded-lg bg-dark-bg border border-dark-border">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">{t('tech.attachTitle')}</p>
+                <div className="p-3 rounded-xl bg-dark-bg border border-dark-border">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">{t('tech.attachTitle')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {TECHNIQUE_ORDER.map((key) => {
                       const style = TECHNIQUE_STYLES[key];
@@ -653,7 +687,7 @@ function ExerciseCard({
                           onClick={() => { onUpdateTechnique(i, key); setTechniquePickerFor(null); }}
                           title={t(style.descKey)}
                           className={cn(
-                            'text-[10px] px-2 py-1 rounded-full border transition-all',
+                            'text-xs px-3 py-1.5 rounded-full border transition-all',
                             isActive
                               ? cn(style.badgeClass, 'ring-1 ring-current')
                               : 'border-dark-border text-slate-400 hover:border-slate-400 hover:text-slate-200',
@@ -664,7 +698,7 @@ function ExerciseCard({
                       );
                     })}
                   </div>
-                  {(s.attachedTechnique === 'TEMPO') && (
+                  {s.attachedTechnique === 'TEMPO' && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dark-border">
                       <span className="text-[10px] text-neon-yellow shrink-0">{t('tech.tempoLabel')}:</span>
                       <input
@@ -672,7 +706,7 @@ function ExerciseCard({
                         placeholder={t('tech.tempoPlaceholder')}
                         value={s.tempo}
                         onChange={(e) => onUpdateTempo(i, e.target.value)}
-                        className="flex-1 text-xs bg-dark-muted border border-neon-yellow/30 rounded px-2 py-0.5 text-neon-yellow focus:outline-none focus:border-neon-yellow/60 font-mono"
+                        className="flex-1 text-xs bg-dark-muted border border-neon-yellow/30 rounded-lg px-2 py-1.5 text-neon-yellow focus:outline-none focus:border-neon-yellow/60 font-mono"
                       />
                     </div>
                   )}
@@ -683,12 +717,19 @@ function ExerciseCard({
         })}
       </div>
 
-      <div className="flex gap-2 mt-2">
-        <button onClick={onAddSet} className="text-xs text-slate-500 hover:text-neon-cyan transition-colors flex items-center gap-1">
-          <Plus size={11} /> {t('session.addSet')}
+      {/* Add / Remove set buttons */}
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={onAddSet}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border border-dark-border text-sm text-slate-400 hover:text-neon-cyan hover:border-neon-cyan/40 transition-colors"
+        >
+          <Plus size={13} /> {t('session.addSet')}
         </button>
         {sets.length > 1 && (
-          <button onClick={() => onRemoveSet(sets.length - 1)} className="text-xs text-slate-600 hover:text-red-400 transition-colors">
+          <button
+            onClick={() => onRemoveSet(sets.length - 1)}
+            className="px-4 py-3 rounded-xl border border-dark-border text-sm text-slate-600 hover:text-red-400 hover:border-red-400/30 transition-colors"
+          >
             {t('session.removeLast')}
           </button>
         )}

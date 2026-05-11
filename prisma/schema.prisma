@@ -129,6 +129,7 @@ enum MuscleGroup {
   BACK
   SHOULDERS
   NECK
+  TRAPS
   BICEPS
   TRICEPS
   FOREARMS

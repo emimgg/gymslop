@@ -24,6 +24,7 @@
   --neon-red:    248 113 113;   /* red-400     */
   --neon-blue:    96 165 250;   /* blue-400    */
   --neon-lime:   163 230  53;   /* lime-400    */
+  --neon-teal:    45 212 191;   /* teal-400    */
   /* Pure dark zinc surfaces */
   --dark-bg:       9   9  11;   /* zinc-950    */
   --dark-card:    24  24  27;   /* zinc-900    */
@@ -47,6 +48,7 @@
   --neon-red:    220  38  38;
   --neon-blue:    56 189 248;
   --neon-lime:     0 255  65;
+  --neon-teal:    20 230 200;
   --dark-bg:       8  11  18;
   --dark-card:    13  17  23;
   --dark-border:  30  45  61;
@@ -69,6 +71,7 @@
   --neon-red:    220  38  38;   /* red-600     */
   --neon-blue:    37  99 235;   /* blue-600    */
   --neon-lime:   101 163  13;   /* lime-600    */
+  --neon-teal:    13 148 136;   /* teal-600    */
   /* Light surfaces — reuse the "dark-*" token names, values now light */
   --dark-bg:     248 250 252;   /* slate-50    */
   --dark-card:   255 255 255;   /* white       */

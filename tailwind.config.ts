@@ -21,6 +21,7 @@ const config: Config = {
           red:    'rgb(var(--neon-red)    / <alpha-value>)',
           blue:   'rgb(var(--neon-blue)   / <alpha-value>)',
           lime:   'rgb(var(--neon-lime)   / <alpha-value>)',
+          teal:   'rgb(var(--neon-teal)   / <alpha-value>)',
         },
         dark: {
           bg:     'rgb(var(--dark-bg)     / <alpha-value>)',
