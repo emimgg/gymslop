@@ -425,6 +425,9 @@ const es = {
   'weight.confirm': 'Confirmar',
   'weight.overwriteWarning': 'Ya registraste peso este día. ¿Querés sobreescribirlo?',
   'weight.logDate': 'Fecha',
+  'weight.configToggle': 'Configuración',
+  'weight.showEntries': 'Ver registros',
+  'weight.hideEntries': 'Ocultar',
 
   // Weekly summary
   'weight.weeklySummary': 'Resumen Semanal',
@@ -1282,6 +1285,9 @@ const en: Record<keyof typeof es, string> = {
   'weight.confirm': 'Confirm',
   'weight.overwriteWarning': 'You already logged weight for this day. Overwrite it?',
   'weight.logDate': 'Date',
+  'weight.configToggle': 'Settings',
+  'weight.showEntries': 'Show entries',
+  'weight.hideEntries': 'Hide',
 
   // Weekly summary
   'weight.weeklySummary': 'Weekly Summary',

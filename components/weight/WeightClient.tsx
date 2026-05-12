@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { TrendingDown, TrendingUp, Minus, Scale, AlertTriangle } from 'lucide-react';
+import { TrendingDown, TrendingUp, Minus, Scale, AlertTriangle, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import { formatDateShort, toDateOnly, todayUTC } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { useAdvancedView } from '@/lib/useAdvancedView';
@@ -58,23 +58,19 @@ interface TDEEBreakdown {
 
 // ─── TDEE calculation ────────────────────────────────────────────────────────
 
-/** Mifflin-St Jeor BMR */
 function calcBMR(weightKg: number, heightCm: number, age: number, sex: string): number {
   const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
   return Math.round(sex === 'MALE' ? base + 5 : base - 161);
 }
 
-/** NEAT = 0.04 kcal per step */
 function calcNEAT(dailySteps: number): number {
   return Math.round(dailySteps * 0.04);
 }
 
-/** kcal burned per lifting session: 5 kcal/min */
 function sessionKcal(durationMin: number): number {
   return durationMin * 5;
 }
 
-/** EAT spread across all 7 days as a daily average */
 function calcEAT(sessionsPerWeek: number, avgDurationMin: number): number {
   return Math.round((sessionsPerWeek * sessionKcal(avgDurationMin)) / 7);
 }
@@ -94,18 +90,53 @@ function calcTDEEBreakdown(
   const eat = calcEAT(liftingSessionsPerWeek, avgSessionDurationMin);
   const tef = Math.round(bmr * 0.10);
   const tdee = bmr + neat + eat + tef;
-  return {
-    bmr, neat, eat, tef, tdee,
-    dailySteps,
-    kcalPerSession: sessionKcal(avgSessionDurationMin),
-  };
+  return { bmr, neat, eat, tef, tdee, dailySteps, kcalPerSession: sessionKcal(avgSessionDurationMin) };
 }
 
 const MAX_SAFE_DEFICIT = 500;
 
-/** Weekly goal in kg → daily calorie delta (1 kg fat ≈ 7700 kcal) */
 function weeklyGoalToDaily(weeklyKg: number): number {
   return Math.round((weeklyKg * 7700) / 7);
+}
+
+// ─── Weekly chart aggregation ─────────────────────────────────────────────────
+// Groups chronological logs by Mon-Sun week. For each week picks the Friday
+// entry; if none, the entry closest to Friday; fallback: last entry of the week.
+function getWeeklyChartData(logs: WeightLog[]): { date: string; weight: number }[] {
+  const weeks = new Map<string, WeightLog[]>();
+  for (const log of logs) {
+    const d = new Date(log.date);
+    const dow = d.getUTCDay(); // 0=Sun
+    const daysToMonday = (dow + 6) % 7;
+    const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysToMonday));
+    const weekKey = toDateOnly(monday);
+    if (!weeks.has(weekKey)) weeks.set(weekKey, []);
+    weeks.get(weekKey)!.push(log);
+  }
+
+  const result: { date: string; weight: number }[] = [];
+  for (const [weekKey, entries] of weeks) {
+    const monday = new Date(weekKey + 'T00:00:00Z');
+    const friday = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 4));
+    const fridayStr = toDateOnly(friday);
+
+    const fridayEntry = entries.find((e) => e.date.startsWith(fridayStr));
+    if (fridayEntry) {
+      result.push({ date: formatDateShort(weekKey), weight: fridayEntry.weight });
+      continue;
+    }
+
+    let best = entries[entries.length - 1];
+    let minDist = Infinity;
+    for (const entry of entries) {
+      const day = new Date(entry.date).getUTCDay();
+      const dist = Math.min(Math.abs(day - 5), 7 - Math.abs(day - 5));
+      if (dist < minDist) { minDist = dist; best = entry; }
+    }
+    result.push({ date: formatDateShort(weekKey), weight: best.weight });
+  }
+
+  return result;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -114,19 +145,32 @@ export function WeightClient() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const advancedView = useAdvancedView();
+
+  // Log form
   const [weight, setWeight] = useState('');
   const [note, setNote] = useState('');
   const [weighingTime, setWeighingTime] = useState('');
-  const [goalWeight, setGoalWeight] = useState('');
   const [logDate, setLogDate] = useState(toDateOnly(todayUTC()));
   const [logging, setLogging] = useState(false);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+
+  // Goal
+  const [goalWeight, setGoalWeight] = useState('');
   const [settingGoal, setSettingGoal] = useState(false);
+
+  // Starting weight reset
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resettingStarting, setResettingStarting] = useState(false);
+
+  // Weekly goal inline
   const [weeklyGoalDraft, setWeeklyGoalDraft] = useState('');
   const [savingWeeklyGoal, setSavingWeeklyGoal] = useState(false);
 
+  // UI toggles
+  const [showConfig, setShowConfig] = useState(false);
+  const [showRecentEntries, setShowRecentEntries] = useState(false);
+
+  // TDEE onboarding modal
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
   const [ob, setOb] = useState({
@@ -187,6 +231,8 @@ export function WeightClient() {
     }
   }, [userProfile?.weeklyGoalKg]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Derived data ───────────────────────────────────────────────────────────
+
   const obBreakdown = (() => {
     const w = parseFloat(ob.currentWeight);
     const h = parseFloat(ob.heightCm);
@@ -208,12 +254,13 @@ export function WeightClient() {
     return Math.max(ob.sex === 'FEMALE' ? 1200 : 1500, target);
   })();
 
+  // ─── Actions ────────────────────────────────────────────────────────────────
+
   async function saveOnboarding() {
     const w = parseFloat(ob.currentWeight);
     const h = parseFloat(ob.heightCm);
     const a = parseInt(ob.age);
     if (!w || !h || !a) { toast.error(t('weight.fillFieldsError')); return; }
-
     setSavingOnboarding(true);
     try {
       await fetch('/api/weight', {
@@ -221,14 +268,11 @@ export function WeightClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weight: w, date: toDateOnly(todayUTC()) }),
       });
-
       await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          heightCm: h,
-          age: a,
-          sex: ob.sex,
+          heightCm: h, age: a, sex: ob.sex,
           stepsPerWeek: parseInt(ob.stepsPerWeek) || 0,
           liftingSessionsPerWeek: parseInt(ob.liftingSessionsPerWeek) || 0,
           avgSessionDurationMin: parseInt(ob.avgSessionDurationMin) || 60,
@@ -236,7 +280,6 @@ export function WeightClient() {
           caloricTarget: obCaloricTarget,
         }),
       });
-
       qc.invalidateQueries({ queryKey: ['weight'] });
       qc.invalidateQueries({ queryKey: ['user-profile'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
@@ -269,10 +312,7 @@ export function WeightClient() {
       await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          weeklyGoalKg: newGoalKg,
-          ...(newTarget != null && { caloricTarget: newTarget }),
-        }),
+        body: JSON.stringify({ weeklyGoalKg: newGoalKg, ...(newTarget != null && { caloricTarget: newTarget }) }),
       });
       qc.invalidateQueries({ queryKey: ['user-profile'] });
       qc.invalidateQueries({ queryKey: ['weight'] });
@@ -326,7 +366,9 @@ export function WeightClient() {
 
   if (isLoading) return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)}</div>;
 
-  const logs = [...(data?.logs ?? [])].reverse();
+  // ─── Computed values ─────────────────────────────────────────────────────────
+
+  const logs = [...(data?.logs ?? [])].reverse(); // chronological
   const startingWeight = data?.startingWeight;
   const startingDate = data?.startingDate ?? null;
   const gw = data?.goalWeight;
@@ -334,11 +376,10 @@ export function WeightClient() {
   const last7 = data?.logs.slice(0, 7) ?? [];
   const avg7 = last7.length > 0 ? last7.reduce((s, l) => s + l.weight, 0) / last7.length : null;
   const diff = currentWeight && startingWeight ? currentWeight - startingWeight : null;
-  const chartData = logs.map((l) => ({ date: formatDateShort(l.date), weight: l.weight }));
 
-  const savedDeficit = userProfile?.weeklyGoalKg != null
-    ? -(weeklyGoalToDaily(userProfile.weeklyGoalKg))
-    : 0;
+  const weeklyChartData = getWeeklyChartData(logs);
+
+  const savedDeficit = userProfile?.weeklyGoalKg != null ? -(weeklyGoalToDaily(userProfile.weeklyGoalKg)) : 0;
   const savedIsAggressiveDeficit = savedDeficit > MAX_SAFE_DEFICIT;
 
   const tdeeBreakdown = (() => {
@@ -348,21 +389,24 @@ export function WeightClient() {
     const s = userProfile?.sex;
     const steps = userProfile?.stepsPerWeek;
     if (!w || !h || !a || !s || !steps) return null;
-    return calcTDEEBreakdown(
-      w, h, a, s,
-      steps,
-      userProfile?.liftingSessionsPerWeek ?? 0,
-      userProfile?.avgSessionDurationMin ?? 60,
-    );
+    return calcTDEEBreakdown(w, h, a, s, steps, userProfile?.liftingSessionsPerWeek ?? 0, userProfile?.avgSessionDurationMin ?? 60);
   })();
 
   function goalAdjustmentLabel(kg: number) {
     return kg < 0 ? t('weight.deficit') : kg > 0 ? t('weight.surplus') : t('weight.adjustment');
   }
 
+  const weeklyGoalBadgeClass = (kg: number) =>
+    kg < 0 ? 'text-neon-cyan border-neon-cyan/40 bg-neon-cyan/5'
+    : kg > 0 ? 'text-neon-pink border-neon-pink/40 bg-neon-pink/5'
+    : 'text-slate-400 border-slate-700';
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
-      {/* 1. Stats row */}
+
+      {/* 1 ── Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="text-center p-3">
           <p className="text-xs text-slate-500 mb-1">{t('weight.current')}</p>
@@ -393,68 +437,23 @@ export function WeightClient() {
         </Card>
       </div>
 
-      {/* 2. Objetivo Calórico + Meta semanal */}
-      {userProfile?.caloricTarget && (
-        <Card neon="green" className="flex items-center justify-between p-3">
+      {/* 2 ── Objetivo Calórico Diario */}
+      {userProfile?.caloricTarget ? (
+        <Card className="flex items-center justify-between py-3 px-4">
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider">{t('weight.dailyTarget')}</p>
-            <p className="text-2xl font-black text-neon-green">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">{t('weight.dailyTarget')}</p>
+            <p className="text-3xl font-black text-neon-green leading-none">
               {userProfile.caloricTarget.toLocaleString()}
-              <span className="text-sm font-normal text-slate-400"> kcal</span>
+              <span className="text-sm font-normal text-slate-500 ml-1.5">kcal</span>
             </p>
           </div>
           {userProfile.weeklyGoalKg != null && (
-            <div className="text-right">
-              <p className="text-xs text-slate-500">{t('weight.weeklyGoal')}</p>
-              <p className={`text-sm font-semibold ${userProfile.weeklyGoalKg < 0 ? 'text-neon-cyan' : userProfile.weeklyGoalKg > 0 ? 'text-neon-pink' : 'text-slate-400'}`}>
-                {userProfile.weeklyGoalKg > 0 ? '+' : ''}{userProfile.weeklyGoalKg} kg/wk
-              </p>
-            </div>
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${weeklyGoalBadgeClass(userProfile.weeklyGoalKg)}`}>
+              {userProfile.weeklyGoalKg > 0 ? '+' : ''}{userProfile.weeklyGoalKg} kg/sem
+            </span>
           )}
         </Card>
-      )}
-      {savedIsAggressiveDeficit && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
-          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          <span>{t('weight.aggressiveWarningMain', { deficit: savedDeficit, max: MAX_SAFE_DEFICIT })}</span>
-        </div>
-      )}
-      {advancedView && tdeeBreakdown && (
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.tdeeBreakdown')}</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">BMR <span className="text-xs text-slate-600">({t('weight.bmrDesc')})</span></span>
-              <span className="text-slate-300 font-semibold">{tdeeBreakdown.bmr.toLocaleString()} kcal</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">NEAT <span className="text-xs text-slate-600">(~{tdeeBreakdown.dailySteps.toLocaleString()} {t('weight.stepsPerDay')})</span></span>
-              <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.neat.toLocaleString()} kcal</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">EAT <span className="text-xs text-slate-600">({t('weight.eatDesc', { sessions: userProfile?.liftingSessionsPerWeek ?? 0, kcal: tdeeBreakdown.kcalPerSession })})</span></span>
-              <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.eat.toLocaleString()} kcal</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-500">TEF <span className="text-xs text-slate-600">({t('weight.tefDesc')})</span></span>
-              <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.tef.toLocaleString()} kcal</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-dark-border pt-2 mt-1">
-              <span className="text-slate-200 font-bold">TDEE <span className="text-xs font-normal text-slate-500">({t('weight.maintenance')})</span></span>
-              <span className="text-slate-100 font-black text-base">{tdeeBreakdown.tdee.toLocaleString()} kcal</span>
-            </div>
-            {userProfile?.weeklyGoalKg != null && (
-              <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
-                <span>{t('weight.adjustmentForGoal', { label: goalAdjustmentLabel(userProfile.weeklyGoalKg), kg: (userProfile.weeklyGoalKg > 0 ? '+' : '') + userProfile.weeklyGoalKg })}</span>
-                <span className={userProfile.weeklyGoalKg < 0 ? 'text-neon-cyan' : userProfile.weeklyGoalKg > 0 ? 'text-neon-pink' : 'text-slate-400'}>
-                  {weeklyGoalToDaily(userProfile.weeklyGoalKg) >= 0 ? '+' : ''}{weeklyGoalToDaily(userProfile.weeklyGoalKg)} kcal/day
-                </span>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-      {!userProfile?.caloricTarget && !isLoading && (
+      ) : !isLoading && (
         <button
           onClick={() => setShowOnboarding(true)}
           className="w-full p-3 rounded-xl border border-dashed border-neon-cyan/30 text-neon-cyan text-sm hover:bg-neon-cyan/5 transition-colors"
@@ -463,7 +462,167 @@ export function WeightClient() {
         </button>
       )}
 
-      {/* 3. Registrar Peso */}
+      {/* Aggressive deficit warning — always visible */}
+      {savedIsAggressiveDeficit && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <span>{t('weight.aggressiveWarningMain', { deficit: savedDeficit, max: MAX_SAFE_DEFICIT })}</span>
+        </div>
+      )}
+
+      {/* 3 ── Configuración (collapsible) */}
+      <Card>
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="w-full flex items-center justify-between"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-slate-400 uppercase tracking-wider">
+            <Settings2 size={14} />
+            {t('weight.configToggle')}
+          </span>
+          {showConfig
+            ? <ChevronUp size={16} className="text-slate-500" />
+            : <ChevronDown size={16} className="text-slate-500" />}
+        </button>
+
+        {showConfig && (
+          <div className="mt-4 pt-4 border-t border-dark-border space-y-5">
+
+            {/* Peso Inicial */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('weight.initialWeightSection')}</p>
+              {startingWeight != null ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xl font-black text-slate-300">
+                      {startingWeight.toFixed(1)} <span className="text-sm font-normal text-slate-500">kg</span>
+                    </p>
+                    {startingDate && <p className="text-xs text-slate-500 mt-0.5">{formatDateShort(startingDate)}</p>}
+                  </div>
+                  <div className="text-right">
+                    {!showResetConfirm ? (
+                      <button
+                        onClick={() => setShowResetConfirm(true)}
+                        className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors underline underline-offset-2"
+                      >
+                        {t('weight.resetStarting')}
+                      </button>
+                    ) : (
+                      <div className="space-y-2 text-right">
+                        <p className="text-[11px] text-amber-400 max-w-[200px]">{t('weight.resetStartingConfirm')}</p>
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => setShowResetConfirm(false)} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                            {t('weight.cancel')}
+                          </button>
+                          <NeonButton variant="cyan" loading={resettingStarting} onClick={resetStartingWeight} className="text-xs !py-1 !px-3">
+                            {t('weight.confirm')}
+                          </NeonButton>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">{t('weight.noInitialWeight')}</p>
+              )}
+            </div>
+
+            {/* Peso Objetivo */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('weight.goalSection')}</p>
+              <div className="flex gap-2">
+                <NeonInput
+                  placeholder="e.g. 75.0"
+                  type="number"
+                  step="0.1"
+                  value={goalWeight}
+                  onChange={(e) => setGoalWeight(e.target.value)}
+                  className="flex-1"
+                />
+                <NeonButton variant="green" loading={settingGoal} onClick={saveGoal}>{t('common.save')}</NeonButton>
+              </div>
+              {gw && currentWeight && (
+                <p className="text-xs text-slate-500 mt-2">
+                  {Math.abs(currentWeight - gw).toFixed(1)} kg {currentWeight > gw ? t('weight.tolose') : t('weight.togain')} {t('weight.toReachGoal')}
+                </p>
+              )}
+            </div>
+
+            {/* Configuración de Actividad */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('weight.activityConfig')}</p>
+                <NeonButton variant="cyan" onClick={() => setShowOnboarding(true)} className="text-xs !py-1 !px-3">
+                  {t('weight.tdeeCta')}
+                </NeonButton>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">{t('weight.dailyTarget')}</span>
+                  <span className={`font-black text-base ${userProfile?.caloricTarget ? 'text-neon-green' : 'text-slate-600'}`}>
+                    {userProfile?.caloricTarget ? `${userProfile.caloricTarget.toLocaleString()} kcal` : t('weight.noCalTarget')}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1.5">{t('weight.weeklyGoalLabel')}</p>
+                  <NeonSelect
+                    value={weeklyGoalDraft}
+                    onChange={(e) => { const v = e.target.value; setWeeklyGoalDraft(v); saveWeeklyGoal(parseFloat(v)); }}
+                    disabled={savingWeeklyGoal}
+                  >
+                    <option value="-1">{t('weight.lose1')}</option>
+                    <option value="-0.75">{t('weight.lose075')}</option>
+                    <option value="-0.5">{t('weight.lose05')}</option>
+                    <option value="-0.25">{t('weight.lose025')}</option>
+                    <option value="0">{t('weight.maintain')}</option>
+                    <option value="0.25">{t('weight.gain025')}</option>
+                    <option value="0.5">{t('weight.gain05')}</option>
+                  </NeonSelect>
+                </div>
+              </div>
+            </div>
+
+            {/* TDEE Breakdown — Advanced View only */}
+            {advancedView && tdeeBreakdown && (
+              <div className="border-t border-dark-border pt-4">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('weight.tdeeBreakdown')}</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">BMR <span className="text-xs text-slate-600">({t('weight.bmrDesc')})</span></span>
+                    <span className="text-slate-300 font-semibold">{tdeeBreakdown.bmr.toLocaleString()} kcal</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">NEAT <span className="text-xs text-slate-600">(~{tdeeBreakdown.dailySteps.toLocaleString()} {t('weight.stepsPerDay')})</span></span>
+                    <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.neat.toLocaleString()} kcal</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">EAT <span className="text-xs text-slate-600">({t('weight.eatDesc', { sessions: userProfile?.liftingSessionsPerWeek ?? 0, kcal: tdeeBreakdown.kcalPerSession })})</span></span>
+                    <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.eat.toLocaleString()} kcal</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">TEF <span className="text-xs text-slate-600">({t('weight.tefDesc')})</span></span>
+                    <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.tef.toLocaleString()} kcal</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-dark-border pt-2 mt-1">
+                    <span className="text-slate-200 font-bold">TDEE <span className="text-xs font-normal text-slate-500">({t('weight.maintenance')})</span></span>
+                    <span className="text-slate-100 font-black text-base">{tdeeBreakdown.tdee.toLocaleString()} kcal</span>
+                  </div>
+                  {userProfile?.weeklyGoalKg != null && (
+                    <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
+                      <span>{t('weight.adjustmentForGoal', { label: goalAdjustmentLabel(userProfile.weeklyGoalKg), kg: (userProfile.weeklyGoalKg > 0 ? '+' : '') + userProfile.weeklyGoalKg })}</span>
+                      <span className={userProfile.weeklyGoalKg < 0 ? 'text-neon-cyan' : userProfile.weeklyGoalKg > 0 ? 'text-neon-pink' : 'text-slate-400'}>
+                        {weeklyGoalToDaily(userProfile.weeklyGoalKg) >= 0 ? '+' : ''}{weeklyGoalToDaily(userProfile.weeklyGoalKg)} kcal/day
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* 4 ── Registrar Peso */}
       <Card neon="cyan">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.logSection')}</h2>
         <div className="flex gap-2 flex-wrap">
@@ -537,106 +696,12 @@ export function WeightClient() {
         })()}
       </Card>
 
-      {/* 4. Configuración */}
-      <div className="space-y-3 pt-1">
-        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-1">Configuración</p>
-
-        {/* Peso Inicial */}
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.initialWeightSection')}</h2>
-          {startingWeight != null ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-black text-slate-300">{startingWeight.toFixed(1)} <span className="text-sm font-normal text-slate-500">kg</span></p>
-                {startingDate && <p className="text-xs text-slate-500 mt-0.5">{formatDateShort(startingDate)}</p>}
-              </div>
-              <div className="text-right">
-                {!showResetConfirm ? (
-                  <button onClick={() => setShowResetConfirm(true)} className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors underline underline-offset-2">
-                    {t('weight.resetStarting')}
-                  </button>
-                ) : (
-                  <div className="space-y-2 text-right">
-                    <p className="text-[11px] text-amber-400 max-w-[200px]">{t('weight.resetStartingConfirm')}</p>
-                    <div className="flex gap-2 justify-end">
-                      <button onClick={() => setShowResetConfirm(false)} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-                        {t('weight.cancel')}
-                      </button>
-                      <NeonButton variant="cyan" loading={resettingStarting} onClick={resetStartingWeight} className="text-xs !py-1 !px-3">
-                        {t('weight.confirm')}
-                      </NeonButton>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">{t('weight.noInitialWeight')}</p>
-          )}
-        </Card>
-
-        {/* Peso Objetivo */}
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.goalSection')}</h2>
-          <div className="flex gap-2">
-            <NeonInput
-              placeholder="e.g. 75.0"
-              type="number"
-              step="0.1"
-              value={goalWeight}
-              onChange={(e) => setGoalWeight(e.target.value)}
-              className="flex-1"
-            />
-            <NeonButton variant="green" loading={settingGoal} onClick={saveGoal}>{t('common.save')}</NeonButton>
-          </div>
-          {gw && currentWeight && (
-            <p className="text-xs text-slate-500 mt-2">
-              {Math.abs(currentWeight - gw).toFixed(1)} kg {currentWeight > gw ? t('weight.tolose') : t('weight.togain')} {t('weight.toReachGoal')}
-            </p>
-          )}
-        </Card>
-
-        {/* Configuración de Actividad */}
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('weight.activityConfig')}</h2>
-            <NeonButton variant="cyan" onClick={() => setShowOnboarding(true)} className="text-xs !py-1 !px-3">
-              {t('weight.tdeeCta')}
-            </NeonButton>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">{t('weight.dailyTarget')}</span>
-              <span className={`font-black text-base ${userProfile?.caloricTarget ? 'text-neon-green' : 'text-slate-600'}`}>
-                {userProfile?.caloricTarget ? `${userProfile.caloricTarget.toLocaleString()} kcal` : t('weight.noCalTarget')}
-              </span>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-1.5">{t('weight.weeklyGoalLabel')}</p>
-              <NeonSelect
-                value={weeklyGoalDraft}
-                onChange={(e) => { const v = e.target.value; setWeeklyGoalDraft(v); saveWeeklyGoal(parseFloat(v)); }}
-                disabled={savingWeeklyGoal}
-              >
-                <option value="-1">{t('weight.lose1')}</option>
-                <option value="-0.75">{t('weight.lose075')}</option>
-                <option value="-0.5">{t('weight.lose05')}</option>
-                <option value="-0.25">{t('weight.lose025')}</option>
-                <option value="0">{t('weight.maintain')}</option>
-                <option value="0.25">{t('weight.gain025')}</option>
-                <option value="0.5">{t('weight.gain05')}</option>
-              </NeonSelect>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* 5. Historial de Peso */}
-      {chartData.length > 1 && (
+      {/* 5 ── Historial de Peso — weekly representative points */}
+      {weeklyChartData.length > 1 && (
         <Card>
           <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">{t('weight.history')}</h2>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+            <LineChart data={weeklyChartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e2d3d" />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
               <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} />
@@ -660,22 +725,33 @@ export function WeightClient() {
         </Card>
       )}
 
-      {/* 6. Resumen Semanal */}
+      {/* 6 ── Resumen Semanal */}
       {advancedView && <WeightWeeklySummary />}
 
-      {/* 7. Registros Recientes */}
+      {/* 7 ── Registros Recientes (collapsible) */}
       {data?.logs && data.logs.length > 0 && (
         <Card>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.recentEntries')}</h2>
-          <div className="space-y-1.5">
-            {data.logs.slice(0, 10).map((log) => (
-              <div key={log.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-dark-muted">
-                <span className="text-slate-400">{formatDateShort(log.date)}</span>
-                <span className="font-semibold text-neon-cyan">{log.weight.toFixed(1)} kg</span>
-                {log.note && <span className="text-xs text-slate-500 truncate max-w-[120px]">{log.note}</span>}
-              </div>
-            ))}
-          </div>
+          <button
+            onClick={() => setShowRecentEntries(!showRecentEntries)}
+            className="w-full flex items-center justify-between"
+          >
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('weight.recentEntries')}</h2>
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              {showRecentEntries ? t('weight.hideEntries') : t('weight.showEntries')}
+              {showRecentEntries ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </span>
+          </button>
+          {showRecentEntries && (
+            <div className="mt-3 space-y-1.5">
+              {data.logs.slice(0, 10).map((log) => (
+                <div key={log.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-dark-muted">
+                  <span className="text-slate-400">{formatDateShort(log.date)}</span>
+                  <span className="font-semibold text-neon-cyan">{log.weight.toFixed(1)} kg</span>
+                  {log.note && <span className="text-xs text-slate-500 truncate max-w-[120px]">{log.note}</span>}
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 
@@ -684,27 +760,22 @@ export function WeightClient() {
         <div className="space-y-4">
           <p className="text-xs text-slate-500">{t('weight.tdeeSubtitle')}</p>
 
-          {/* Body stats */}
           <div className="grid grid-cols-2 gap-3">
             <NeonInput
               label={t('weight.currentWeightLabel')}
-              type="number"
-              step="0.1"
-              placeholder="e.g. 82"
+              type="number" step="0.1" placeholder="e.g. 82"
               value={ob.currentWeight}
               onChange={(e) => setOb({ ...ob, currentWeight: e.target.value })}
             />
             <NeonInput
               label={t('weight.heightLabel')}
-              type="number"
-              placeholder="e.g. 178"
+              type="number" placeholder="e.g. 178"
               value={ob.heightCm}
               onChange={(e) => setOb({ ...ob, heightCm: e.target.value })}
             />
             <NeonInput
               label={t('weight.ageLabel')}
-              type="number"
-              placeholder="e.g. 25"
+              type="number" placeholder="e.g. 25"
               value={ob.age}
               onChange={(e) => setOb({ ...ob, age: e.target.value })}
             />
@@ -718,14 +789,11 @@ export function WeightClient() {
             </NeonSelect>
           </div>
 
-          {/* Activity inputs */}
           <div className="border-t border-dark-border pt-3 space-y-3">
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">{t('weight.dailyActivity')}</p>
             <NeonInput
               label={t('weight.stepsPerWeek')}
-              type="number"
-              step="1000"
-              placeholder={t('weight.stepsPlaceholder')}
+              type="number" step="1000" placeholder={t('weight.stepsPlaceholder')}
               value={ob.stepsPerWeek}
               onChange={(e) => setOb({ ...ob, stepsPerWeek: e.target.value })}
             />
@@ -739,18 +807,13 @@ export function WeightClient() {
             <div className="grid grid-cols-2 gap-3">
               <NeonInput
                 label={t('weight.sessionsPerWeek')}
-                type="number"
-                min="0"
-                max="14"
-                placeholder="e.g. 4"
+                type="number" min="0" max="14" placeholder="e.g. 4"
                 value={ob.liftingSessionsPerWeek}
                 onChange={(e) => setOb({ ...ob, liftingSessionsPerWeek: e.target.value })}
               />
               <NeonInput
                 label={t('weight.avgDuration')}
-                type="number"
-                step="5"
-                placeholder="e.g. 60"
+                type="number" step="5" placeholder="e.g. 60"
                 value={ob.avgSessionDurationMin}
                 onChange={(e) => setOb({ ...ob, avgSessionDurationMin: e.target.value })}
               />
@@ -762,7 +825,6 @@ export function WeightClient() {
             )}
           </div>
 
-          {/* Weekly goal */}
           <NeonSelect
             label={t('weight.weeklyGoalLabel')}
             value={ob.weeklyGoalKg}
@@ -777,7 +839,6 @@ export function WeightClient() {
             <option value="0.5">{t('weight.gain05')}</option>
           </NeonSelect>
 
-          {/* Aggressive deficit warning */}
           {obIsAggressiveDeficit && (
             <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
@@ -785,7 +846,6 @@ export function WeightClient() {
             </div>
           )}
 
-          {/* Live breakdown preview */}
           {obBreakdown && obCaloricTarget && (
             <div className="p-3 rounded-xl bg-dark-muted border border-dark-border space-y-2 text-sm">
               <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{t('weight.calcPreview')}</p>
@@ -794,15 +854,11 @@ export function WeightClient() {
                 <span className="text-slate-300 font-semibold">{obBreakdown.bmr.toLocaleString()} kcal</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">
-                  + NEAT <span className="text-xs text-slate-600">(~{obBreakdown.dailySteps.toLocaleString()} {t('weight.stepsPerDay')})</span>
-                </span>
+                <span className="text-slate-500">+ NEAT <span className="text-xs text-slate-600">(~{obBreakdown.dailySteps.toLocaleString()} {t('weight.stepsPerDay')})</span></span>
                 <span className="text-neon-cyan font-semibold">+{obBreakdown.neat.toLocaleString()} kcal</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">
-                  + EAT <span className="text-xs text-slate-600">({t('weight.liftingDesc')})</span>
-                </span>
+                <span className="text-slate-500">+ EAT <span className="text-xs text-slate-600">({t('weight.liftingDesc')})</span></span>
                 <span className="text-neon-cyan font-semibold">+{obBreakdown.eat.toLocaleString()} kcal</span>
               </div>
               <div className="flex justify-between">
