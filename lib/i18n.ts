@@ -423,6 +423,8 @@ const es = {
   'weight.noCalTarget': 'Sin objetivo calórico — usá la calculadora',
   'weight.cancel': 'Cancelar',
   'weight.confirm': 'Confirmar',
+  'weight.overwriteWarning': 'Ya registraste peso este día. ¿Querés sobreescribirlo?',
+  'weight.logDate': 'Fecha',
 
   // Weekly summary
   'weight.weeklySummary': 'Resumen Semanal',
@@ -1278,6 +1280,8 @@ const en: Record<keyof typeof es, string> = {
   'weight.noCalTarget': 'No target — use the calculator',
   'weight.cancel': 'Cancel',
   'weight.confirm': 'Confirm',
+  'weight.overwriteWarning': 'You already logged weight for this day. Overwrite it?',
+  'weight.logDate': 'Date',
 
   // Weekly summary
   'weight.weeklySummary': 'Weekly Summary',

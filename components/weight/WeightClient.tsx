@@ -118,7 +118,9 @@ export function WeightClient() {
   const [note, setNote] = useState('');
   const [weighingTime, setWeighingTime] = useState('');
   const [goalWeight, setGoalWeight] = useState('');
+  const [logDate, setLogDate] = useState(toDateOnly(todayUTC()));
   const [logging, setLogging] = useState(false);
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const [settingGoal, setSettingGoal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resettingStarting, setResettingStarting] = useState(false);
@@ -280,20 +282,26 @@ export function WeightClient() {
     }
   }
 
-  async function logWeight() {
+  async function logWeight(force = false) {
     if (!weight) return;
+    if (!force) {
+      const exists = data?.logs.some((l) => l.date.startsWith(logDate));
+      if (exists) { setShowOverwriteConfirm(true); return; }
+    }
     setLogging(true);
     try {
       await fetch('/api/weight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weight, note, date: toDateOnly(todayUTC()), weighingTime: weighingTime || null }),
+        body: JSON.stringify({ weight, note, date: logDate, weighingTime: weighingTime || null }),
       });
       qc.invalidateQueries({ queryKey: ['weight'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       setWeight('');
       setNote('');
       setWeighingTime('');
+      setLogDate(toDateOnly(todayUTC()));
+      setShowOverwriteConfirm(false);
       toast.success(t('weight.loggedToast'));
     } finally {
       setLogging(false);
@@ -354,7 +362,7 @@ export function WeightClient() {
 
   return (
     <div className="space-y-4">
-      {/* Stats row */}
+      {/* 1. Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="text-center p-3">
           <p className="text-xs text-slate-500 mb-1">{t('weight.current')}</p>
@@ -385,7 +393,7 @@ export function WeightClient() {
         </Card>
       </div>
 
-      {/* Caloric target banner */}
+      {/* 2. Objetivo Calórico + Meta semanal */}
       {userProfile?.caloricTarget && (
         <Card neon="green" className="flex items-center justify-between p-3">
           <div>
@@ -405,16 +413,12 @@ export function WeightClient() {
           )}
         </Card>
       )}
-
-      {/* Aggressive deficit warning */}
       {savedIsAggressiveDeficit && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <span>{t('weight.aggressiveWarningMain', { deficit: savedDeficit, max: MAX_SAFE_DEFICIT })}</span>
         </div>
       )}
-
-      {/* TDEE Breakdown card — Advanced View only */}
       {advancedView && tdeeBreakdown && (
         <Card>
           <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.tdeeBreakdown')}</h2>
@@ -424,21 +428,11 @@ export function WeightClient() {
               <span className="text-slate-300 font-semibold">{tdeeBreakdown.bmr.toLocaleString()} kcal</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">
-                NEAT{' '}
-                <span className="text-xs text-slate-600">
-                  (~{tdeeBreakdown.dailySteps.toLocaleString()} {t('weight.stepsPerDay')})
-                </span>
-              </span>
+              <span className="text-slate-500">NEAT <span className="text-xs text-slate-600">(~{tdeeBreakdown.dailySteps.toLocaleString()} {t('weight.stepsPerDay')})</span></span>
               <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.neat.toLocaleString()} kcal</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">
-                EAT{' '}
-                <span className="text-xs text-slate-600">
-                  ({t('weight.eatDesc', { sessions: userProfile?.liftingSessionsPerWeek ?? 0, kcal: tdeeBreakdown.kcalPerSession })})
-                </span>
-              </span>
+              <span className="text-slate-500">EAT <span className="text-xs text-slate-600">({t('weight.eatDesc', { sessions: userProfile?.liftingSessionsPerWeek ?? 0, kcal: tdeeBreakdown.kcalPerSession })})</span></span>
               <span className="text-neon-cyan font-semibold">+{tdeeBreakdown.eat.toLocaleString()} kcal</span>
             </div>
             <div className="flex items-center justify-between">
@@ -451,12 +445,7 @@ export function WeightClient() {
             </div>
             {userProfile?.weeklyGoalKg != null && (
               <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
-                <span>
-                  {t('weight.adjustmentForGoal', {
-                    label: goalAdjustmentLabel(userProfile.weeklyGoalKg),
-                    kg: (userProfile.weeklyGoalKg > 0 ? '+' : '') + userProfile.weeklyGoalKg,
-                  })}
-                </span>
+                <span>{t('weight.adjustmentForGoal', { label: goalAdjustmentLabel(userProfile.weeklyGoalKg), kg: (userProfile.weeklyGoalKg > 0 ? '+' : '') + userProfile.weeklyGoalKg })}</span>
                 <span className={userProfile.weeklyGoalKg < 0 ? 'text-neon-cyan' : userProfile.weeklyGoalKg > 0 ? 'text-neon-pink' : 'text-slate-400'}>
                   {weeklyGoalToDaily(userProfile.weeklyGoalKg) >= 0 ? '+' : ''}{weeklyGoalToDaily(userProfile.weeklyGoalKg)} kcal/day
                 </span>
@@ -465,8 +454,6 @@ export function WeightClient() {
           </div>
         </Card>
       )}
-
-      {/* Set up profile CTA */}
       {!userProfile?.caloricTarget && !isLoading && (
         <button
           onClick={() => setShowOnboarding(true)}
@@ -476,25 +463,7 @@ export function WeightClient() {
         </button>
       )}
 
-      {/* Weighing time inconsistency warning — Advanced View only */}
-      {advancedView && (() => {
-        const timeLogs = data?.logs.slice(0, 7).filter((l) => l.weighingTime) ?? [];
-        if (timeLogs.length < 3) return null;
-        const hours = timeLogs.map((l) => {
-          const [h, m] = (l.weighingTime as string).split(':').map(Number);
-          return h + m / 60;
-        });
-        const spread = Math.max(...hours) - Math.min(...hours);
-        if (spread <= 2) return null;
-        return (
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
-            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-            <span>{t('weight.timeInconsistency')}</span>
-          </div>
-        );
-      })()}
-
-      {/* Log weight */}
+      {/* 3. Registrar Peso */}
       <Card neon="cyan">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.logSection')}</h2>
         <div className="flex gap-2 flex-wrap">
@@ -503,7 +472,7 @@ export function WeightClient() {
             type="number"
             step="0.1"
             value={weight}
-            onChange={(e) => setWeight(e.target.value)}
+            onChange={(e) => { setWeight(e.target.value); setShowOverwriteConfirm(false); }}
             className="flex-1 min-w-[80px]"
           />
           <NeonInput
@@ -512,6 +481,16 @@ export function WeightClient() {
             onChange={(e) => setNote(e.target.value)}
             className="flex-1 min-w-[80px]"
           />
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] text-slate-500 uppercase tracking-wider">{t('weight.logDate')}</label>
+            <input
+              type="date"
+              value={logDate}
+              max={toDateOnly(todayUTC())}
+              onChange={(e) => { setLogDate(e.target.value); setShowOverwriteConfirm(false); }}
+              className="bg-dark-muted border border-dark-border rounded-lg px-3 py-2 text-sm text-neon-cyan focus:outline-none focus:border-neon-cyan/60 w-36"
+            />
+          </div>
           {advancedView && (
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-slate-500 uppercase tracking-wider">{t('weight.weighingTime')}</label>
@@ -519,70 +498,50 @@ export function WeightClient() {
                 type="time"
                 value={weighingTime}
                 onChange={(e) => setWeighingTime(e.target.value)}
-                placeholder={t('weight.fastedHint')}
                 className="bg-dark-muted border border-dark-border rounded-lg px-3 py-2 text-sm text-neon-cyan focus:outline-none focus:border-neon-cyan/60 w-32"
               />
             </div>
           )}
-          <NeonButton variant="cyan" loading={logging} onClick={logWeight} className="self-end">
+          <NeonButton variant="cyan" loading={logging} onClick={() => logWeight()} className="self-end">
             <Scale size={14} /> {t('weight.logBtn')}
           </NeonButton>
         </div>
+        {showOverwriteConfirm && (
+          <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={13} className="shrink-0" />
+              <span>{t('weight.overwriteWarning')}</span>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => setShowOverwriteConfirm(false)} className="text-slate-500 hover:text-slate-300 transition-colors">
+                {t('weight.cancel')}
+              </button>
+              <NeonButton variant="cyan" loading={logging} onClick={() => logWeight(true)} className="!py-1 !px-3">
+                {t('weight.confirm')}
+              </NeonButton>
+            </div>
+          </div>
+        )}
+        {advancedView && (() => {
+          const timeLogs = data?.logs.slice(0, 7).filter((l) => l.weighingTime) ?? [];
+          if (timeLogs.length < 3) return null;
+          const hours = timeLogs.map((l) => { const [h, m] = (l.weighingTime as string).split(':').map(Number); return h + m / 60; });
+          const spread = Math.max(...hours) - Math.min(...hours);
+          if (spread <= 2) return null;
+          return (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <span>{t('weight.timeInconsistency')}</span>
+            </div>
+          );
+        })()}
       </Card>
 
-      {/* Chart */}
-      {chartData.length > 1 && (
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">{t('weight.history')}</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e2d3d" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} />
-              <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} />
-              <Tooltip
-                contentStyle={{ background: '#0d1117', border: '1px solid #1e2d3d', borderRadius: '8px', fontSize: '12px' }}
-                itemStyle={{ color: '#00f5ff' }}
-                formatter={(v: number) => [`${v.toFixed(1)} kg`]}
-              />
-              {gw && <ReferenceLine y={gw} stroke="#39ff14" strokeDasharray="4 4" label={{ value: t('weight.goalLabel'), fill: '#39ff14', fontSize: 10 }} />}
-              <Line
-                type="monotone"
-                dataKey="weight"
-                stroke="#00f5ff"
-                strokeWidth={2}
-                dot={{ fill: '#00f5ff', r: 3 }}
-                activeDot={{ r: 5 }}
-                style={{ filter: 'drop-shadow(0 0 4px #00f5ff)' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
-
-      {/* Weekly summary — Advanced View only */}
-      {advancedView && <WeightWeeklySummary />}
-
-      {/* Recent entries */}
-      {data?.logs && data.logs.length > 0 && (
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.recentEntries')}</h2>
-          <div className="space-y-1.5">
-            {data.logs.slice(0, 10).map((log) => (
-              <div key={log.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-dark-muted">
-                <span className="text-slate-400">{formatDateShort(log.date)}</span>
-                <span className="font-semibold text-neon-cyan">{log.weight.toFixed(1)} kg</span>
-                {log.note && <span className="text-xs text-slate-500 truncate max-w-[120px]">{log.note}</span>}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* ── Settings ─────────────────────────────────────────────────────────── */}
+      {/* 4. Configuración */}
       <div className="space-y-3 pt-1">
         <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-1">Configuración</p>
 
-        {/* Section 1: Peso Inicial */}
+        {/* Peso Inicial */}
         <Card>
           <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.initialWeightSection')}</h2>
           {startingWeight != null ? (
@@ -593,10 +552,7 @@ export function WeightClient() {
               </div>
               <div className="text-right">
                 {!showResetConfirm ? (
-                  <button
-                    onClick={() => setShowResetConfirm(true)}
-                    className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors underline underline-offset-2"
-                  >
+                  <button onClick={() => setShowResetConfirm(true)} className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors underline underline-offset-2">
                     {t('weight.resetStarting')}
                   </button>
                 ) : (
@@ -619,7 +575,7 @@ export function WeightClient() {
           )}
         </Card>
 
-        {/* Section 2: Peso Objetivo */}
+        {/* Peso Objetivo */}
         <Card>
           <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.goalSection')}</h2>
           <div className="flex gap-2">
@@ -640,7 +596,7 @@ export function WeightClient() {
           )}
         </Card>
 
-        {/* Section 3: Configuración de Actividad */}
+        {/* Configuración de Actividad */}
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('weight.activityConfig')}</h2>
@@ -659,11 +615,7 @@ export function WeightClient() {
               <p className="text-xs text-slate-500 mb-1.5">{t('weight.weeklyGoalLabel')}</p>
               <NeonSelect
                 value={weeklyGoalDraft}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setWeeklyGoalDraft(v);
-                  saveWeeklyGoal(parseFloat(v));
-                }}
+                onChange={(e) => { const v = e.target.value; setWeeklyGoalDraft(v); saveWeeklyGoal(parseFloat(v)); }}
                 disabled={savingWeeklyGoal}
               >
                 <option value="-1">{t('weight.lose1')}</option>
@@ -678,6 +630,54 @@ export function WeightClient() {
           </div>
         </Card>
       </div>
+
+      {/* 5. Historial de Peso */}
+      {chartData.length > 1 && (
+        <Card>
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">{t('weight.history')}</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e2d3d" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} interval="preserveStartEnd" />
+              <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ background: '#0d1117', border: '1px solid #1e2d3d', borderRadius: '8px', fontSize: '12px' }}
+                itemStyle={{ color: '#00f5ff' }}
+                formatter={(v: number) => [`${v.toFixed(1)} kg`]}
+              />
+              {gw && <ReferenceLine y={gw} stroke="#39ff14" strokeDasharray="4 4" label={{ value: t('weight.goalLabel'), fill: '#39ff14', fontSize: 10 }} />}
+              <Line
+                type="monotone"
+                dataKey="weight"
+                stroke="#00f5ff"
+                strokeWidth={2}
+                dot={{ fill: '#00f5ff', r: 3 }}
+                activeDot={{ r: 5 }}
+                style={{ filter: 'drop-shadow(0 0 4px #00f5ff)' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* 6. Resumen Semanal */}
+      {advancedView && <WeightWeeklySummary />}
+
+      {/* 7. Registros Recientes */}
+      {data?.logs && data.logs.length > 0 && (
+        <Card>
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.recentEntries')}</h2>
+          <div className="space-y-1.5">
+            {data.logs.slice(0, 10).map((log) => (
+              <div key={log.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-dark-muted">
+                <span className="text-slate-400">{formatDateShort(log.date)}</span>
+                <span className="font-semibold text-neon-cyan">{log.weight.toFixed(1)} kg</span>
+                {log.note && <span className="text-xs text-slate-500 truncate max-w-[120px]">{log.note}</span>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* ── TDEE Setup / Edit modal ──────────────────────────────────────────── */}
       <Modal open={showOnboarding} onClose={() => setShowOnboarding(false)} title={t('weight.tdeeTitle')}>
