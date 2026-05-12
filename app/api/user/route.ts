@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest) {
     const session = await requireAuth();
     const body = await req.json();
     const {
-      goalWeight, startingWeight, heightCm, name, age, sex, activityLevel,
+      goalWeight, heightCm, name, age, sex, activityLevel,
       stepsPerWeek, liftingSessionsPerWeek, avgSessionDurationMin,
       weeklyGoalKg, caloricTarget, advancedView,
       restTimerCompound, restTimerIsolation,
@@ -54,7 +54,6 @@ export async function PATCH(req: NextRequest) {
       where: { id: session.user.id },
       data: {
         ...(goalWeight != null && { goalWeight: parseFloat(goalWeight) }),
-        ...(startingWeight != null && { startingWeight: parseFloat(startingWeight) }),
         ...(heightCm != null && { heightCm: parseFloat(heightCm) }),
         ...(name != null && { name }),
         ...(age != null && { age: parseInt(age) }),

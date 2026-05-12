@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { TrendingDown, TrendingUp, Minus, Scale, Settings2, AlertTriangle } from 'lucide-react';
+import { TrendingDown, TrendingUp, Minus, Scale, AlertTriangle } from 'lucide-react';
 import { formatDateShort, toDateOnly, todayUTC } from '@/lib/utils';
 import { useI18n } from '@/components/providers/I18nProvider';
 import { useAdvancedView } from '@/lib/useAdvancedView';
@@ -29,6 +29,7 @@ interface WeightLog {
 interface WeightData {
   logs: WeightLog[];
   startingWeight: number | null;
+  startingDate: string | null;
   goalWeight: number | null;
 }
 
@@ -119,6 +120,10 @@ export function WeightClient() {
   const [goalWeight, setGoalWeight] = useState('');
   const [logging, setLogging] = useState(false);
   const [settingGoal, setSettingGoal] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resettingStarting, setResettingStarting] = useState(false);
+  const [weeklyGoalDraft, setWeeklyGoalDraft] = useState('');
+  const [savingWeeklyGoal, setSavingWeeklyGoal] = useState(false);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
@@ -174,6 +179,12 @@ export function WeightClient() {
     if (data?.goalWeight && !goalWeight) setGoalWeight(String(data.goalWeight));
   }, [data?.goalWeight]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (userProfile?.weeklyGoalKg != null && !weeklyGoalDraft) {
+      setWeeklyGoalDraft(String(userProfile.weeklyGoalKg));
+    }
+  }, [userProfile?.weeklyGoalKg]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const obBreakdown = (() => {
     const w = parseFloat(ob.currentWeight);
     const h = parseFloat(ob.heightCm);
@@ -213,7 +224,6 @@ export function WeightClient() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          startingWeight: w,
           heightCm: h,
           age: a,
           sex: ob.sex,
@@ -233,6 +243,40 @@ export function WeightClient() {
       toast.success(t('weight.savedToast'));
     } finally {
       setSavingOnboarding(false);
+    }
+  }
+
+  async function resetStartingWeight() {
+    setResettingStarting(true);
+    try {
+      await fetch('/api/weight/starting-weight', { method: 'POST' });
+      qc.invalidateQueries({ queryKey: ['weight'] });
+      setShowResetConfirm(false);
+      toast.success(t('weight.resetStartingToast'));
+    } finally {
+      setResettingStarting(false);
+    }
+  }
+
+  async function saveWeeklyGoal(newGoalKg: number) {
+    setSavingWeeklyGoal(true);
+    try {
+      const newTarget = tdeeBreakdown
+        ? Math.max(userProfile?.sex === 'FEMALE' ? 1200 : 1500, tdeeBreakdown.tdee + weeklyGoalToDaily(newGoalKg))
+        : null;
+      await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weeklyGoalKg: newGoalKg,
+          ...(newTarget != null && { caloricTarget: newTarget }),
+        }),
+      });
+      qc.invalidateQueries({ queryKey: ['user-profile'] });
+      qc.invalidateQueries({ queryKey: ['weight'] });
+      toast.success(t('weight.weeklyGoalUpdatedToast'));
+    } finally {
+      setSavingWeeklyGoal(false);
     }
   }
 
@@ -276,6 +320,7 @@ export function WeightClient() {
 
   const logs = [...(data?.logs ?? [])].reverse();
   const startingWeight = data?.startingWeight;
+  const startingDate = data?.startingDate ?? null;
   const gw = data?.goalWeight;
   const currentWeight = data?.logs[0]?.weight ?? null;
   const last7 = data?.logs.slice(0, 7) ?? [];
@@ -350,23 +395,14 @@ export function WeightClient() {
               <span className="text-sm font-normal text-slate-400"> kcal</span>
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            {userProfile.weeklyGoalKg != null && (
-              <div className="text-right">
-                <p className="text-xs text-slate-500">{t('weight.weeklyGoal')}</p>
-                <p className={`text-sm font-semibold ${userProfile.weeklyGoalKg < 0 ? 'text-neon-cyan' : userProfile.weeklyGoalKg > 0 ? 'text-neon-pink' : 'text-slate-400'}`}>
-                  {userProfile.weeklyGoalKg > 0 ? '+' : ''}{userProfile.weeklyGoalKg} kg/wk
-                </p>
-              </div>
-            )}
-            <button
-              onClick={() => setShowOnboarding(true)}
-              className="text-slate-500 hover:text-neon-cyan transition-colors"
-              title={t('weight.editSettings')}
-            >
-              <Settings2 size={16} />
-            </button>
-          </div>
+          {userProfile.weeklyGoalKg != null && (
+            <div className="text-right">
+              <p className="text-xs text-slate-500">{t('weight.weeklyGoal')}</p>
+              <p className={`text-sm font-semibold ${userProfile.weeklyGoalKg < 0 ? 'text-neon-cyan' : userProfile.weeklyGoalKg > 0 ? 'text-neon-pink' : 'text-slate-400'}`}>
+                {userProfile.weeklyGoalKg > 0 ? '+' : ''}{userProfile.weeklyGoalKg} kg/wk
+              </p>
+            </div>
+          )}
         </Card>
       )}
 
@@ -494,27 +530,6 @@ export function WeightClient() {
         </div>
       </Card>
 
-      {/* Goal weight */}
-      <Card>
-        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.goalSection')}</h2>
-        <div className="flex gap-2">
-          <NeonInput
-            placeholder="e.g. 75.0"
-            type="number"
-            step="0.1"
-            value={goalWeight}
-            onChange={(e) => setGoalWeight(e.target.value)}
-            className="flex-1"
-          />
-          <NeonButton variant="green" loading={settingGoal} onClick={saveGoal}>{t('common.save')}</NeonButton>
-        </div>
-        {gw && currentWeight && (
-          <p className="text-xs text-slate-500 mt-2">
-            {Math.abs(currentWeight - gw).toFixed(1)} kg {currentWeight > gw ? t('weight.tolose') : t('weight.togain')} {t('weight.toReachGoal')}
-          </p>
-        )}
-      </Card>
-
       {/* Chart */}
       {chartData.length > 1 && (
         <Card>
@@ -562,6 +577,107 @@ export function WeightClient() {
           </div>
         </Card>
       )}
+
+      {/* ── Settings ─────────────────────────────────────────────────────────── */}
+      <div className="space-y-3 pt-1">
+        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-1">Configuración</p>
+
+        {/* Section 1: Peso Inicial */}
+        <Card>
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.initialWeightSection')}</h2>
+          {startingWeight != null ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xl font-black text-slate-300">{startingWeight.toFixed(1)} <span className="text-sm font-normal text-slate-500">kg</span></p>
+                {startingDate && <p className="text-xs text-slate-500 mt-0.5">{formatDateShort(startingDate)}</p>}
+              </div>
+              <div className="text-right">
+                {!showResetConfirm ? (
+                  <button
+                    onClick={() => setShowResetConfirm(true)}
+                    className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors underline underline-offset-2"
+                  >
+                    {t('weight.resetStarting')}
+                  </button>
+                ) : (
+                  <div className="space-y-2 text-right">
+                    <p className="text-[11px] text-amber-400 max-w-[200px]">{t('weight.resetStartingConfirm')}</p>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setShowResetConfirm(false)} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                        {t('weight.cancel')}
+                      </button>
+                      <NeonButton variant="cyan" loading={resettingStarting} onClick={resetStartingWeight} className="text-xs !py-1 !px-3">
+                        {t('weight.confirm')}
+                      </NeonButton>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">{t('weight.noInitialWeight')}</p>
+          )}
+        </Card>
+
+        {/* Section 2: Peso Objetivo */}
+        <Card>
+          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">{t('weight.goalSection')}</h2>
+          <div className="flex gap-2">
+            <NeonInput
+              placeholder="e.g. 75.0"
+              type="number"
+              step="0.1"
+              value={goalWeight}
+              onChange={(e) => setGoalWeight(e.target.value)}
+              className="flex-1"
+            />
+            <NeonButton variant="green" loading={settingGoal} onClick={saveGoal}>{t('common.save')}</NeonButton>
+          </div>
+          {gw && currentWeight && (
+            <p className="text-xs text-slate-500 mt-2">
+              {Math.abs(currentWeight - gw).toFixed(1)} kg {currentWeight > gw ? t('weight.tolose') : t('weight.togain')} {t('weight.toReachGoal')}
+            </p>
+          )}
+        </Card>
+
+        {/* Section 3: Configuración de Actividad */}
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('weight.activityConfig')}</h2>
+            <NeonButton variant="cyan" onClick={() => setShowOnboarding(true)} className="text-xs !py-1 !px-3">
+              {t('weight.tdeeCta')}
+            </NeonButton>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">{t('weight.dailyTarget')}</span>
+              <span className={`font-black text-base ${userProfile?.caloricTarget ? 'text-neon-green' : 'text-slate-600'}`}>
+                {userProfile?.caloricTarget ? `${userProfile.caloricTarget.toLocaleString()} kcal` : t('weight.noCalTarget')}
+              </span>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 mb-1.5">{t('weight.weeklyGoalLabel')}</p>
+              <NeonSelect
+                value={weeklyGoalDraft}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setWeeklyGoalDraft(v);
+                  saveWeeklyGoal(parseFloat(v));
+                }}
+                disabled={savingWeeklyGoal}
+              >
+                <option value="-1">{t('weight.lose1')}</option>
+                <option value="-0.75">{t('weight.lose075')}</option>
+                <option value="-0.5">{t('weight.lose05')}</option>
+                <option value="-0.25">{t('weight.lose025')}</option>
+                <option value="0">{t('weight.maintain')}</option>
+                <option value="0.25">{t('weight.gain025')}</option>
+                <option value="0.5">{t('weight.gain05')}</option>
+              </NeonSelect>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* ── TDEE Setup / Edit modal ──────────────────────────────────────────── */}
       <Modal open={showOnboarding} onClose={() => setShowOnboarding(false)} title={t('weight.tdeeTitle')}>

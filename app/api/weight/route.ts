@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') ?? '90');
 
-    const [logs, user] = await Promise.all([
+    const [logs, user, earliestLog] = await Promise.all([
       prisma.weightLog.findMany({
         where: { userId },
         orderBy: { date: 'desc' },
@@ -22,9 +22,24 @@ export async function GET(req: NextRequest) {
         where: { id: userId },
         select: { startingWeight: true, goalWeight: true },
       }),
+      prisma.weightLog.findFirst({
+        where: { userId },
+        orderBy: { date: 'asc' },
+        select: { weight: true, date: true },
+      }),
     ]);
 
-    return NextResponse.json({ logs, startingWeight: user?.startingWeight, goalWeight: user?.goalWeight });
+    // Self-heal: always keep startingWeight in sync with the actual earliest log
+    if (earliestLog && user?.startingWeight !== earliestLog.weight) {
+      await prisma.user.update({ where: { id: userId }, data: { startingWeight: earliestLog.weight } });
+    }
+
+    return NextResponse.json({
+      logs,
+      startingWeight: earliestLog?.weight ?? user?.startingWeight ?? null,
+      startingDate: earliestLog?.date ?? null,
+      goalWeight: user?.goalWeight ?? null,
+    });
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -47,10 +62,14 @@ export async function POST(req: NextRequest) {
       create: { userId, date: logDate, weight: parseFloat(weight), note: note ?? null, weighingTime: weighingTime ?? null },
     });
 
-    // Set starting weight if not set
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { startingWeight: true } });
-    if (!user?.startingWeight) {
-      await prisma.user.update({ where: { id: userId }, data: { startingWeight: parseFloat(weight) } });
+    // Always keep startingWeight locked to the earliest log entry
+    const earliest = await prisma.weightLog.findFirst({
+      where: { userId },
+      orderBy: { date: 'asc' },
+      select: { weight: true },
+    });
+    if (earliest) {
+      await prisma.user.update({ where: { id: userId }, data: { startingWeight: earliest.weight } });
     }
 
     await awardXp(userId, XP.WEIGHT_LOG);
