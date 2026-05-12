@@ -5,7 +5,7 @@ export type Lang = 'es' | 'en';
 const es = {
   // Nav
   'nav.dashboard': 'Inicio',
-  'nav.routines': 'Rutinas',
+  'nav.routines': 'Workouts',
   'nav.meals': 'Comidas',
   'nav.weight': 'Peso',
   'nav.feels': 'Bienestar',
@@ -1004,7 +1004,7 @@ const es = {
 } as const;
 
 const en: Record<keyof typeof es, string> = {
-  'nav.dashboard': 'Dashboard', 'nav.routines': 'Routines', 'nav.meals': 'Meals',
+  'nav.dashboard': 'Dashboard', 'nav.routines': 'Workouts', 'nav.meals': 'Meals',
   'nav.weight': 'Weight', 'nav.feels': 'Feels', 'nav.progress': 'Progress',
   'nav.trophies': 'Trophies', 'nav.theme': 'Theme', 'nav.language': 'Language',
   'nav.social': 'Social', 'nav.more': 'More', 'nav.profile': 'Profile', 'nav.leaderboard': 'Leaderboard',
